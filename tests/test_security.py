@@ -14,7 +14,7 @@ def test_password_hash_roundtrip():
 
 
 def test_token_roundtrip():
-    token = create_access_token(43)
+    token = create_access_token(42)
     assert decode_access_token(token)["sub"] == "42"
 
 

@@ -21,6 +21,12 @@ class UserRead(BaseModel):
     created_at: datetime
 
 
+class LoginForm(BaseModel):
+    # Field names are fixed by OAuth2 so Swagger's Authorize button works; username holds the email.
+    username: str
+    password: str
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"

@@ -1,13 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Form, HTTPException, status
 from sqlalchemy import select
 
 from app.core.dependencies import CurrentUser, SessionDep
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models import User
-from app.schemas.user import Token, UserCreate, UserRead
+from app.schemas.user import LoginForm, Token, UserCreate, UserRead
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -30,8 +29,7 @@ async def register(data: UserCreate, session: SessionDep):
 
 
 @router.post("/login", response_model=Token)
-async def login(form: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep):
-    # OAuth2 calls the field "username"; here it holds the email.
+async def login(form: Annotated[LoginForm, Form()], session: SessionDep):
     user = await session.scalar(select(User).where(User.email == form.username))
     if user is None or not user.is_active or not verify_password(form.password, user.hashed_password):
         raise HTTPException(

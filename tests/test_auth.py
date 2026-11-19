@@ -3,7 +3,11 @@ PASSWORD = "secret123"
 
 
 async def register(client, **overrides):
-    payload = {"email": EMAIL, "full_name": "Alice", "password": PASSWORD, **overrides}
+    payload = {"email": EMAIL, 
+               "full_name": "Alice",
+               "password": PASSWORD,
+               **overrides
+    }
     return await client.post("/auth/register", json=payload)
 
 

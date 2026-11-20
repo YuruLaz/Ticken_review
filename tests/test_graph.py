@@ -1,3 +1,4 @@
+import pytest
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
@@ -22,41 +23,52 @@ def new_graph():
     return build_graph(checkpointer=InMemorySaver())
 
 
-def test_spam_is_not_replied(fake_llm):
+def fake_retrieve(articles):
+    async def retrieve(state):
+        return {"kb_articles": articles, "best_kb_score": articles[0]["score"] if articles else 0.0}
+
+    return retrieve
+
+
+# Keeps every graph test away from the real database and embedding API; "nothing found" by default.
+@pytest.fixture(autouse=True)
+def empty_kb(monkeypatch):
+    monkeypatch.setattr(nodes, "retrieve", fake_retrieve([]))
+
+
+async def test_spam_is_not_replied(fake_llm):
     fake_llm.answers = [classification("spam")]
 
-    result = new_graph().invoke(TICKET, CONFIG)
+    result = await new_graph().ainvoke(TICKET, CONFIG)
 
     assert result["route"] == "spam"
     assert "draft_reply" not in result
 
 
-def test_failed_quality_check_retries_once_then_stops(fake_llm):
+async def test_failed_quality_check_retries_once_then_stops(fake_llm):
     fake_llm.answers = [classification(), reply(""), reply("")]
 
-    result = new_graph().invoke(TICKET, CONFIG)
+    result = await new_graph().ainvoke(TICKET, CONFIG)
 
     assert result["attempts"] == 2
     assert "quality issue: empty reply" in result["route_reasons"]
 
 
-def test_confident_ticket_is_auto_sent(fake_llm, monkeypatch):
+async def test_confident_ticket_is_auto_sent(fake_llm, monkeypatch):
     # Pretend RAG found a good article, so nothing sends the ticket to a human.
-    monkeypatch.setattr(
-        nodes, "retrieve", lambda state: {"kb_articles": [{"id": 1}], "best_kb_score": 0.9}
-    )
+    monkeypatch.setattr(nodes, "retrieve", fake_retrieve([{"id": 1, "score": 0.9}]))
     fake_llm.answers = [classification(), reply(cited=[1])]
 
-    result = new_graph().invoke(TICKET, CONFIG)
+    result = await new_graph().ainvoke(TICKET, CONFIG)
 
     assert result["route"] == "auto_send"
     assert result["final_reply"] == "Your order ships tomorrow."
 
 
-def test_human_review_pauses_the_graph(fake_llm):
+async def test_human_review_pauses_the_graph(fake_llm):
     fake_llm.answers = [classification(), reply()]
 
-    result = new_graph().invoke(TICKET, CONFIG)
+    result = await new_graph().ainvoke(TICKET, CONFIG)
 
     assert result["route"] == "human_review"
     assert "final_reply" not in result
@@ -64,12 +76,12 @@ def test_human_review_pauses_the_graph(fake_llm):
     assert result["__interrupt__"][0].value["draft_reply"] == "Your order ships tomorrow."
 
 
-def test_agent_edit_resumes_the_graph(fake_llm):
+async def test_agent_edit_resumes_the_graph(fake_llm):
     fake_llm.answers = [classification(), reply()]
     graph = new_graph()
-    graph.invoke(TICKET, CONFIG)
+    await graph.ainvoke(TICKET, CONFIG)
 
-    result = graph.invoke(Command(resume={"action": "edit", "reply": "Edited by agent."}), CONFIG)
+    result = await graph.ainvoke(Command(resume={"action": "edit", "reply": "Edited by agent."}), CONFIG)
 
     assert result["review_action"] == "edit"
     assert result["final_reply"] == "Edited by agent."
@@ -77,12 +89,12 @@ def test_agent_edit_resumes_the_graph(fake_llm):
     assert len(fake_llm.prompts) == 2
 
 
-def test_agent_reject_sends_nothing(fake_llm):
+async def test_agent_reject_sends_nothing(fake_llm):
     fake_llm.answers = [classification(), reply()]
     graph = new_graph()
-    graph.invoke(TICKET, CONFIG)
+    await graph.ainvoke(TICKET, CONFIG)
 
-    result = graph.invoke(Command(resume={"action": "reject"}), CONFIG)
+    result = await graph.ainvoke(Command(resume={"action": "reject"}), CONFIG)
 
     assert result["review_action"] == "reject"
     assert result["final_reply"] == ""

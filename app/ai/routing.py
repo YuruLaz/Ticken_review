@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
+# Measured on the seeded KB with gemini-embedding-001: covered questions 0.64-0.73, uncovered 0.58-0.62.
+MIN_KB_SCORE = 0.65
+
 # Starting guesses, not measured values: conservative so that doubtful tickets go to a human.
-MIN_KB_SCORE = 0.75
 MIN_CLASSIFICATION_CONFIDENCE = 0.75
 MIN_DRAFT_CONFIDENCE = 0.80
 

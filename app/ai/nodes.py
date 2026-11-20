@@ -2,9 +2,11 @@ from langgraph.types import interrupt
 
 from app.ai.llm import get_llm
 from app.ai.prompts import classify_prompt, draft_prompt
+from app.ai.retrieval import search_kb
 from app.ai.routing import route
 from app.ai.schemas import DraftReply, TicketClassification
 from app.ai.state import TicketState
+from app.database.db import SessionLocal
 
 # Each node returns only the fields it changed; LangGraph merges them into the state.
 
@@ -23,9 +25,12 @@ def mark_spam(state: TicketState) -> dict:
     return {"route": "spam"}
 
 
-def retrieve(state: TicketState) -> dict:
-    # Stub until RAG (step 12): "nothing found" makes route() send every ticket to a human.
-    return {"kb_articles": [], "best_kb_score": 0.0}
+# async because the database is; LangGraph awaits it, and the graph must then be run with ainvoke.
+async def retrieve(state: TicketState) -> dict:
+    async with SessionLocal() as session:
+        articles = await search_kb(session, f"{state['subject']}\n{state['body']}")
+    best_score = articles[0]["score"] if articles else 0.0
+    return {"kb_articles": articles, "best_kb_score": best_score}
 
 
 def draft(state: TicketState) -> dict:

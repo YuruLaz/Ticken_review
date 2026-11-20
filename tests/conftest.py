@@ -3,6 +3,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.ai import nodes
 from app.core.config import settings
 from app.database.base import Base
 from app.database.db import get_session
@@ -39,3 +40,26 @@ async def client(session_maker):
     ) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+class FakeLLM:
+    """Stands in for Gemini: returns the queued answers in order and remembers the prompts."""
+
+    def __init__(self):
+        self.answers = []
+        self.prompts = []
+
+    def with_structured_output(self, schema):
+        return self
+
+    def invoke(self, prompt):
+        self.prompts.append(prompt)
+        return self.answers.pop(0)
+
+
+@pytest.fixture
+def fake_llm(monkeypatch):
+    fake = FakeLLM()
+    # Patch the name nodes.py imported, not app.ai.llm.get_llm: nodes holds its own reference.
+    monkeypatch.setattr(nodes, "get_llm", lambda: fake)
+    return fake

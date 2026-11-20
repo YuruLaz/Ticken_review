@@ -15,7 +15,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(data: UserCreate, session: SessionDep):
     existing = await session.scalar(select(User).where(User.email == data.email))
     if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
+        )
 
     # role is never taken from the request, so nobody can register as admin.
     user = User(
@@ -31,7 +33,11 @@ async def register(data: UserCreate, session: SessionDep):
 @router.post("/login", response_model=Token)
 async def login(form: Annotated[LoginForm, Form()], session: SessionDep):
     user = await session.scalar(select(User).where(User.email == form.username))
-    if user is None or not user.is_active or not verify_password(form.password, user.hashed_password):
+    if (
+        user is None
+        or not user.is_active
+        or not verify_password(form.password, user.hashed_password)
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

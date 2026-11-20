@@ -3,17 +3,15 @@ PASSWORD = "secret123"
 
 
 async def register(client, **overrides):
-    payload = {"email": EMAIL, 
-               "full_name": "Alice",
-               "password": PASSWORD,
-               **overrides
-    }
+    payload = {"email": EMAIL, "full_name": "Alice", "password": PASSWORD, **overrides}
     return await client.post("/auth/register", json=payload)
 
 
 async def login(client, password=PASSWORD):
     # /auth/login takes form data, not JSON, because it follows the OAuth2 spec.
-    return await client.post("/auth/login", data={"username": EMAIL, "password": password})
+    return await client.post(
+        "/auth/login", data={"username": EMAIL, "password": password}
+    )
 
 
 async def test_register_creates_customer(client):
@@ -52,7 +50,9 @@ async def test_me_with_token_returns_user(client):
     await register(client)
     token = (await login(client)).json()["access_token"]
 
-    response = await client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    response = await client.get(
+        "/auth/me", headers={"Authorization": f"Bearer {token}"}
+    )
 
     assert response.status_code == 200
     assert response.json()["email"] == EMAIL

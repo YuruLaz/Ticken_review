@@ -34,6 +34,8 @@ async def client(session_maker):
 
     # Every route that depends on get_session gets the test database instead.
     app.dependency_overrides[get_session] = get_test_session
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
         yield c
     app.dependency_overrides.clear()

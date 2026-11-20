@@ -17,12 +17,18 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(user_id: int) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.access_token_expire_minutes
+    )
     # The JWT standard requires "sub" to be a string; PyJWT rejects an int.
     payload = {"sub": str(user_id), "exp": expire}
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(
+        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+    )
 
 
 def decode_access_token(token: str) -> dict:
     # Raises jwt.InvalidTokenError (incl. ExpiredSignatureError) on a bad token.
-    return jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+    return jwt.decode(
+        token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+    )

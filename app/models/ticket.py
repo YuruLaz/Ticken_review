@@ -22,7 +22,9 @@ class Ticket(Base):
     language: Mapped[str | None] = mapped_column(String(10))
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(), onupdate=func.now()
+    )
 
     messages: Mapped[list["TicketMessage"]] = relationship(
         back_populates="ticket", order_by="TicketMessage.created_at"
@@ -33,7 +35,9 @@ class TicketMessage(Base):
     __tablename__ = "ticket_messages"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id", ondelete="CASCADE"), index=True)
+    ticket_id: Mapped[int] = mapped_column(
+        ForeignKey("tickets.id", ondelete="CASCADE"), index=True
+    )
     # customer | ai | agent. Stored separately from author_id because AI messages have no user.
     sender_type: Mapped[str] = mapped_column(String(20))
     author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))

@@ -6,7 +6,13 @@ from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import CurrentUser, SessionDep, require_role
 from app.models import Ticket, TicketMessage, User
-from app.schemas.ticket import MessageCreate, MessageRead, TicketCreate, TicketDetail, TicketRead
+from app.schemas.ticket import (
+    MessageCreate,
+    MessageRead,
+    TicketCreate,
+    TicketDetail,
+    TicketRead,
+)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -16,11 +22,15 @@ Customer = Annotated[User, Depends(require_role("customer"))]
 async def get_visible_ticket(session: SessionDep, ticket_id: int, user: User) -> Ticket:
     # Messages are loaded up front: in async code a lazy load on ticket.messages fails.
     ticket = await session.scalar(
-        select(Ticket).options(selectinload(Ticket.messages)).where(Ticket.id == ticket_id)
+        select(Ticket)
+        .options(selectinload(Ticket.messages))
+        .where(Ticket.id == ticket_id)
     )
     # 404 rather than 403 for someone else's ticket, so customers can't probe which ids exist.
     if ticket is None or (user.role == "customer" and ticket.customer_id != user.id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found"
+        )
     return ticket
 
 
@@ -45,10 +55,18 @@ async def get_ticket(ticket_id: int, user: CurrentUser, session: SessionDep):
     return await get_visible_ticket(session, ticket_id, user)
 
 
-@router.post("/{ticket_id}/messages", response_model=MessageRead, status_code=status.HTTP_201_CREATED)
-async def add_message(ticket_id: int, data: MessageCreate, user: Customer, session: SessionDep):
+@router.post(
+    "/{ticket_id}/messages",
+    response_model=MessageRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_message(
+    ticket_id: int, data: MessageCreate, user: Customer, session: SessionDep
+):
     ticket = await get_visible_ticket(session, ticket_id, user)
-    message = TicketMessage(ticket_id=ticket.id, sender_type="customer", author_id=user.id, body=data.body)
+    message = TicketMessage(
+        ticket_id=ticket.id, sender_type="customer", author_id=user.id, body=data.body
+    )
     session.add(message)
     await session.commit()
     return message

@@ -1,14 +1,14 @@
 from app.ai.llm import get_llm
+from app.ai.prompts import classify_prompt, draft_prompt
 from app.ai.routing import route
 from app.ai.schemas import DraftReply, TicketClassification
 from app.ai.state import TicketState
-from app.ai.prompts import classify_prompt, draft_prompt
 
 # Each node returns only the fields it changed; LangGraph merges them into the state.
 
 
 def classify(state: TicketState) -> dict:
-    result = get_llm().with_structured_output(TicketClassification).invoke(classify_prompt)
+    result = get_llm().with_structured_output(TicketClassification).invoke(classify_prompt(state))
     return {
         "category": result.category,
         "priority": result.priority,
@@ -27,7 +27,7 @@ def retrieve(state: TicketState) -> dict:
 
 
 def draft(state: TicketState) -> dict:
-    result = get_llm().with_structured_output(DraftReply).invoke(draft_prompt)
+    result = get_llm().with_structured_output(DraftReply).invoke(draft_prompt(state))
     return {
         "draft_reply": result.reply,
         "draft_confidence": result.confidence,

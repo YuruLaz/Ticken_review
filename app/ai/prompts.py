@@ -1,6 +1,7 @@
-from app.ai.state import TicketState as state
+from app.ai.state import TicketState
 
-classify_prompt = f"""
+def classify_prompt(state: TicketState) -> str:
+    return f"""
 Classify the following customer support ticket.
 
 Determine:
@@ -14,7 +15,6 @@ Categories:
 - billing: payments, refunds, invoices, or charges
 - account: login, account access, account settings, or account security
 - shipping: delivery, tracking, or shipping delays
-- product: questions, complaints, or problems regarding a product
 - general: questions or requests that don't fit other categories
 - spam: unsolicited, irrelevant, promotional, or malicious messages
 
@@ -27,7 +27,7 @@ Priorities:
 Sentiment:
 - positive: satisfied, appreciative, or enthusiastic
 - neutral: factual or emotionally neutral
-- frustrated: dissatisfied, irritated, or upset
+- negative: dissatisfied, irritated, or upset
 - angry: strongly negative, hostile, or expressing severe dissatisfaction
 
 Base your classification only on the ticket content.
@@ -39,7 +39,8 @@ Body: {state['body']}
 """
 
 
-draft_prompt = f"""
+def draft_prompt(state: TicketState) -> str:
+    return f"""
 You are a customer support agent writing a response to a customer.
 
 Write a clear, professional, helpful and concise reply to the ticket.

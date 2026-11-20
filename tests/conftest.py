@@ -1,5 +1,6 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -21,6 +22,8 @@ async def session_maker():
     # Dropping at the start rather than the end leaves a failed test's data
     # behind so you can inspect it.
     async with engine.begin() as conn:
+        # Alembic enables this in the dev DB; create_all doesn't, and kb_articles needs it.
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     yield async_sessionmaker(engine, expire_on_commit=False)

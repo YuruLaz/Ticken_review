@@ -21,6 +21,7 @@ class TicketState(TypedDict, total=False):
     # draft + quality check
     draft_reply: str
     draft_confidence: float
+    cited_article_ids: list[int]
     quality_issues: list[str]
     attempts: int
 

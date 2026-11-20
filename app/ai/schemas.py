@@ -15,10 +15,6 @@ class TicketClassification(BaseModel):
 
 class DraftReply(BaseModel):
     reply: str = Field(description="The reply to send to the customer")
-    confidence: float = Field(
-        ge=0, le=1, description="How well the knowledge base articles support this reply"
-    )
+    confidence: float = Field(ge=0, le=1, description="How well the knowledge base articles support this reply")
     # Lets the quality check verify the reply is grounded: every id must be one we actually retrieved.
-    cited_article_ids: list[int] = Field(
-        description="IDs of the knowledge base articles this reply is based on"
-    )
+    cited_article_ids: list[int] = Field(description="IDs of the knowledge base articles this reply is based on")

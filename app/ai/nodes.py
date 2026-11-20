@@ -1,3 +1,5 @@
+from langgraph.types import interrupt
+
 from app.ai.llm import get_llm
 from app.ai.prompts import classify_prompt, draft_prompt
 from app.ai.routing import route
@@ -59,3 +61,21 @@ def decide_route(state: TicketState) -> dict:
         quality_issues=state["quality_issues"],
     )
     return {"route": decision.action, "route_reasons": decision.reasons}
+
+
+def send_reply(state: TicketState) -> dict:
+    return {"final_reply": state["draft_reply"]}
+
+
+def human_review(state: TicketState) -> dict:
+    # interrupt() pauses the graph here and hands this dict to whoever runs it (later: the API).
+    # On resume, this node starts over and interrupt() returns the agent's decision instead.
+    decision = interrupt({"draft_reply": state["draft_reply"], "reasons": state["route_reasons"]})
+
+    if decision["action"] == "approve":
+        final_reply = state["draft_reply"]
+    elif decision["action"] == "edit":
+        final_reply = decision["reply"]
+    else:
+        final_reply = ""
+    return {"review_action": decision["action"], "final_reply": final_reply}

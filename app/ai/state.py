@@ -28,3 +28,7 @@ class TicketState(TypedDict, total=False):
     # route
     route: str  # spam | auto_send | human_review
     route_reasons: list[str]
+
+    # outcome
+    review_action: str  # approve | edit | reject (only when a human reviewed it)
+    final_reply: str  # what the customer gets; empty when rejected

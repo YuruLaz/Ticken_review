@@ -1,42 +1,88 @@
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.types import Command
+
+from app.ai import nodes
 from app.ai.graph import build_graph
 from app.ai.schemas import DraftReply, TicketClassification
 
 TICKET = {"ticket_id": 1, "subject": "Where is my order?", "body": "Order 123 is late."}
+# One ticket = one thread: the checkpointer stores and resumes state per thread_id.
+CONFIG = {"configurable": {"thread_id": "ticket-1"}}
 
 
 def classification(category="shipping"):
     return TicketClassification(category=category, priority="low", sentiment="neutral", confidence=0.9)
 
 
-def reply(text="Your order ships tomorrow."):
-    return DraftReply(reply=text, confidence=0.9, cited_article_ids=[])
+def reply(text="Your order ships tomorrow.", cited=()):
+    return DraftReply(reply=text, confidence=0.9, cited_article_ids=list(cited))
+
+
+def new_graph():
+    return build_graph(checkpointer=InMemorySaver())
 
 
 def test_spam_is_not_replied(fake_llm):
     fake_llm.answers = [classification("spam")]
 
-    result = build_graph().invoke(TICKET)
+    result = new_graph().invoke(TICKET, CONFIG)
 
     assert result["route"] == "spam"
     assert "draft_reply" not in result
 
 
-def test_normal_ticket_gets_a_draft_and_a_route(fake_llm):
-    fake_llm.answers = [classification(), reply()]
-
-    result = build_graph().invoke(TICKET)
-
-    assert result["draft_reply"] == "Your order ships tomorrow."
-    assert result["attempts"] == 1
-    # The retrieve stub finds no articles yet, so every ticket goes to a human for now.
-    assert result["route"] == "human_review"
-
-
 def test_failed_quality_check_retries_once_then_stops(fake_llm):
     fake_llm.answers = [classification(), reply(""), reply("")]
 
-    result = build_graph().invoke(TICKET)
+    result = new_graph().invoke(TICKET, CONFIG)
 
     assert result["attempts"] == 2
-    assert result["route"] == "human_review"
     assert "quality issue: empty reply" in result["route_reasons"]
+
+
+def test_confident_ticket_is_auto_sent(fake_llm, monkeypatch):
+    # Pretend RAG found a good article, so nothing sends the ticket to a human.
+    monkeypatch.setattr(
+        nodes, "retrieve", lambda state: {"kb_articles": [{"id": 1}], "best_kb_score": 0.9}
+    )
+    fake_llm.answers = [classification(), reply(cited=[1])]
+
+    result = new_graph().invoke(TICKET, CONFIG)
+
+    assert result["route"] == "auto_send"
+    assert result["final_reply"] == "Your order ships tomorrow."
+
+
+def test_human_review_pauses_the_graph(fake_llm):
+    fake_llm.answers = [classification(), reply()]
+
+    result = new_graph().invoke(TICKET, CONFIG)
+
+    assert result["route"] == "human_review"
+    assert "final_reply" not in result
+    # What interrupt() handed out: the draft the agent will see.
+    assert result["__interrupt__"][0].value["draft_reply"] == "Your order ships tomorrow."
+
+
+def test_agent_edit_resumes_the_graph(fake_llm):
+    fake_llm.answers = [classification(), reply()]
+    graph = new_graph()
+    graph.invoke(TICKET, CONFIG)
+
+    result = graph.invoke(Command(resume={"action": "edit", "reply": "Edited by agent."}), CONFIG)
+
+    assert result["review_action"] == "edit"
+    assert result["final_reply"] == "Edited by agent."
+    # The LLM was not called again: the graph continued from the saved state.
+    assert len(fake_llm.prompts) == 2
+
+
+def test_agent_reject_sends_nothing(fake_llm):
+    fake_llm.answers = [classification(), reply()]
+    graph = new_graph()
+    graph.invoke(TICKET, CONFIG)
+
+    result = graph.invoke(Command(resume={"action": "reject"}), CONFIG)
+
+    assert result["review_action"] == "reject"
+    assert result["final_reply"] == ""

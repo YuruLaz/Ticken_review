@@ -1,0 +1,147 @@
+/* One small hand-written stylesheet: variables first, then layout, then components. */
+
+:root {
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --border: #e3e6ea;
+  --text: #1d2330;
+  --muted: #6b7280;
+  --accent: #3b5bdb;
+  --accent-soft: #eef2ff;
+  --urgent: #e03131;
+  --high: #f08c00;
+  --ok: #2f9e44;
+  --radius: 8px;
+  --topbar: 52px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+h1 { font-size: 1.5rem; margin: 0 0 1rem; }
+h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 .5rem; }
+.muted { color: var(--muted); }
+
+/* --- top bar --- */
+.topbar {
+  height: var(--topbar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.brand { font-weight: 700; color: var(--text); text-decoration: none; }
+.brand span { color: var(--accent); }
+.who { display: flex; align-items: center; gap: .75rem; }
+.who form { margin: 0; }
+
+/* --- page layouts --- */
+.page { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+
+/* Three panes that fill the screen below the top bar; each pane scrolls on its own. */
+.inbox {
+  display: grid;
+  grid-template-columns: 210px 360px 1fr;
+  height: calc(100vh - var(--topbar));
+}
+.pane { overflow-y: auto; padding: 1rem; border-right: 1px solid var(--border); }
+.views { background: var(--panel); }
+.list { background: var(--bg); }
+.workspace { background: var(--panel); border-right: none; }
+.empty { color: var(--muted); text-align: center; margin-top: 30vh; }
+
+.view {
+  display: flex;
+  justify-content: space-between;
+  padding: .4rem .6rem;
+  border-radius: var(--radius);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.view:hover { background: var(--bg); }
+.view.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+/* --- components --- */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.card summary { font-weight: 600; cursor: pointer; }
+
+.stack { display: flex; flex-direction: column; gap: .75rem; margin-top: 1rem; }
+label { display: flex; flex-direction: column; gap: .25rem; font-size: .9rem; color: var(--muted); }
+input, textarea {
+  font: inherit;
+  color: var(--text);
+  padding: .5rem .6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+input:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+
+button {
+  font: inherit;
+  padding: .5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  cursor: pointer;
+}
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.link { border: none; background: none; color: var(--accent); padding: 0; }
+
+.chip {
+  display: inline-block;
+  padding: 0 .5rem;
+  border-radius: 999px;
+  font-size: .8rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.alert { padding: .6rem .8rem; border-radius: var(--radius); }
+.alert.error { background: #fff5f5; color: var(--urgent); }
+.alert.success { background: #ebfbee; color: var(--ok); }
+
+.auth { max-width: 420px; margin: 3rem auto; }
+
+/* --- inbox: views + ticket list --- */
+.views hr { border: none; border-top: 1px solid var(--border); margin: .5rem 0; }
+.count { color: var(--muted); font-weight: 400; font-size: .85rem; }
+.view.active .count { color: var(--accent); }
+
+#filters input[type=search] { width: 100%; margin-bottom: .75rem; }
+
+.row {
+  display: flex;
+  gap: .6rem;
+  padding: .6rem .7rem;
+  margin-bottom: .4rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.row-main { flex: 1; min-width: 0; }  /* min-width lets long text shrink instead of widening the pane */
+.row-top { display: flex; justify-content: space-between; gap: .5rem; }
+.row-top strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.snippet { color: var(--muted); font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.small { font-size: .8rem; }
+.empty-list { text-align: center; margin-top: 2rem; }
+
+/* Priority dot: red urgent, orange high, grey otherwise. */
+.dot { width: 10px; height: 10px; border-radius: 50%; margin-top: .45rem; flex-shrink: 0; background: var(--border); }
+.dot.urgent { background: var(--urgent); }
+.dot.high { background: var(--high); }
+.dot.medium { background: #94a3b8; }

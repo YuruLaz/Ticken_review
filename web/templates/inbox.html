@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Inbox · SupportDesk{% endblock %}
+{% block main_class %}inbox{% endblock %}
+
+{% block content %}
+{# hx-boost: these links load the next page with htmx (no full reload), and the URL still updates. #}
+<nav class="pane views" hx-boost="true">
+  <h2>Views</h2>
+  {% for name, label, status in views %}
+    <a class="view {{ 'active' if name == view }}" href="/inbox?view={{ name }}">
+      {{ label }}
+      <span class="count">{{ total if status is none else counts.get(status, 0) }}</span>
+    </a>
+    {% if name == "escalated" %}<hr>{% endif %}
+  {% endfor %}
+</nav>
+
+<section class="pane list">
+  <form id="filters" onsubmit="return false">
+    <input type="hidden" name="view" value="{{ view }}">
+    {# Search as you type: 300 ms after the last keystroke, only the list below is replaced. #}
+    <input type="search" name="q" value="{{ q }}" placeholder="Search subject or message…"
+           hx-get="/inbox/list" hx-include="#filters" hx-target="#list"
+           hx-trigger="input changed delay:300ms, search">
+  </form>
+  {# Refreshes itself, since the AI finishes tickets in the background. #}
+  <div id="list" hx-get="/inbox/list" hx-include="#filters" hx-trigger="every 20s">
+    {% include "_ticket_list.html" %}
+  </div>
+</section>
+
+<section class="pane workspace" id="workspace">
+  <p class="empty">Select a ticket</p>
+</section>
+{% endblock %}

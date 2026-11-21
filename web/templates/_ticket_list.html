@@ -1,0 +1,20 @@
+{# Partial: the ticket rows only. Rendered inside inbox.html and on its own for htmx swaps. #}
+{% for ticket in tickets %}
+  <div class="row">
+    <span class="dot {{ ticket.priority or '' }}" title="{{ ticket.priority or 'no priority yet' }}"></span>
+    <div class="row-main">
+      <div class="row-top">
+        <strong>#{{ ticket.id }} {{ ticket.subject }}</strong>
+        <span class="muted small">{{ ticket.created_at | age }}</span>
+      </div>
+      <div class="snippet">{{ ticket.body | truncate(80) }}</div>
+      <div class="small muted">
+        {{ ticket.category or "not classified" }}
+        {% if ticket.sentiment %}· {{ ticket.sentiment | mood }} {{ ticket.sentiment }}{% endif %}
+        {% if view == "all" %}· <span class="chip">{{ ticket.status }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+{% else %}
+  <p class="empty-list muted">No tickets here.</p>
+{% endfor %}

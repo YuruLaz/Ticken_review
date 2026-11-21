@@ -58,8 +58,18 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+def include_object(object, name, type_, reflected, compare_to):
+    # LangGraph's checkpointer owns its tables (checkpoints, checkpoint_writes, ...);
+    # without this, autogenerate sees them as unknown and writes drop_table for them.
+    return not (type_ == "table" and name.startswith("checkpoint"))
+
+
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=include_object,
+    )
 
     with context.begin_transaction():
         context.run_migrations()

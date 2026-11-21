@@ -114,3 +114,13 @@ async def test_failed_run_continues_from_last_checkpoint(fake_llm):
     assert result["route"] == "human_review"
     # classify was not called again: one prompt for it, one per draft attempt.
     assert len(fake_llm.prompts) == 3
+
+
+async def test_llm_never_sees_raw_card_number(fake_llm):
+    fake_llm.answers = [classification("spam")]
+    ticket = {**TICKET, "body": "Charged twice on card 5167 4401 2233 1234"}
+
+    await new_graph().ainvoke(ticket, CONFIG)
+
+    assert "5167 **** **** 1234" in fake_llm.prompts[0]
+    assert "4401" not in fake_llm.prompts[0]

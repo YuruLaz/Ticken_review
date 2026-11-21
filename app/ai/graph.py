@@ -26,6 +26,7 @@ def after_decide_route(state: TicketState) -> str:
 def build_graph(checkpointer=None):
     graph = StateGraph(TicketState)
 
+    graph.add_node("sanitize_input", nodes.sanitize_input)
     graph.add_node("classify", nodes.classify)
     graph.add_node("mark_spam", nodes.mark_spam)
     graph.add_node("retrieve", nodes.retrieve)
@@ -35,7 +36,8 @@ def build_graph(checkpointer=None):
     graph.add_node("send_reply", nodes.send_reply)
     graph.add_node("human_review", nodes.human_review)
 
-    graph.add_edge(START, "classify")
+    graph.add_edge(START, "sanitize_input")
+    graph.add_edge("sanitize_input", "classify")
     graph.add_conditional_edges("classify", after_classify, ["mark_spam", "retrieve"])
     graph.add_edge("mark_spam", END)
     graph.add_edge("retrieve", "draft")

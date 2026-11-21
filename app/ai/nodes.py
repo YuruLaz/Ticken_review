@@ -1,6 +1,7 @@
 from langgraph.types import interrupt
 
 from app.ai.llm import get_llm
+from app.ai.pii import mask_pii
 from app.ai.prompts import classify_prompt, draft_prompt
 from app.ai.retrieval import search_kb
 from app.ai.routing import route
@@ -9,6 +10,12 @@ from app.ai.state import TicketState
 from app.database.db import SessionLocal
 
 # Each node returns only the fields it changed; LangGraph merges them into the state.
+
+
+# First node, so Gemini, the checkpoints and traces never see raw card or phone numbers.
+# The tickets table keeps the original text for agents.
+def sanitize_input(state: TicketState) -> dict:
+    return {"subject": mask_pii(state["subject"]), "body": mask_pii(state["body"])}
 
 
 def classify(state: TicketState) -> dict:

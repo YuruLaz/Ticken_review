@@ -6,7 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field
 class TicketCreate(BaseModel):
     # Matches String(200) in the model; without it a long subject is a 500 from the DB.
     subject: str = Field(max_length=200)
-    body: str
+    # Spec's input limit: keeps prompts (and their cost) bounded; rejected here rather than cut silently.
+    body: str = Field(max_length=5000)
 
 
 class MessageCreate(BaseModel):

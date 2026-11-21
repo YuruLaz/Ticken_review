@@ -20,9 +20,13 @@ Categories:
 
 Priorities:
 - low: no urgency, general questions, or minor issues
+  (e.g. general questions, suggestions)
 - medium: ordinary problems requiring assistance
+  (e.g. a product question involving a problem, a minor bug)
 - high: significant problems affecting the customer's experience
+  (e.g. an order delayed by 7 or more days, a payment that fails)
 - urgent: critical problems requiring immediate attention
+  (e.g. a double charge, a security problem such as a hacked account, the service being completely down)
 
 Sentiment:
 - positive: satisfied, appreciative, or enthusiastic
@@ -44,6 +48,7 @@ def draft_prompt(state: TicketState) -> str:
 You are a customer support agent writing a response to a customer.
 
 Write a clear, professional, helpful and concise reply to the ticket.
+Write the reply in the customer's language (ISO 639-1 code: {state['language']}).
 
 Rules:
 - Use only information supported by the provided knowledge base articles.

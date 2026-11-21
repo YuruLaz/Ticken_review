@@ -12,7 +12,8 @@ CONFIG = {"configurable": {"thread_id": "ticket-1"}}
 
 
 def classification(category="shipping"):
-    return TicketClassification(category=category, priority="low", sentiment="neutral", confidence=0.9)
+    return TicketClassification(category=category, priority="low", sentiment="neutral", language="en",
+                                summary="Customer asks about an order.", confidence=0.9)
 
 
 def reply(text="Your order ships tomorrow.", cited=()):

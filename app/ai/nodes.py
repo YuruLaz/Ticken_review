@@ -17,6 +17,8 @@ def classify(state: TicketState) -> dict:
         "category": result.category,
         "priority": result.priority,
         "sentiment": result.sentiment,
+        "language": result.language,
+        "summary": result.summary,
         "classification_confidence": result.confidence,
     }
 

@@ -20,12 +20,25 @@ def test_urgent_goes_to_human():
     assert route(**{**GOOD, "priority": "urgent"}).action == "human_review"
 
 
+def test_high_goes_to_human():
+    assert route(**{**GOOD, "priority": "high"}).action == "human_review"
+
+
+def test_medium_can_be_auto_sent():
+    assert route(**{**GOOD, "priority": "medium"}).action == "auto_send"
+
+
 def test_angry_goes_to_human():
     assert route(**{**GOOD, "sentiment": "angry"}).action == "human_review"
 
 
 def test_billing_goes_to_human():
     assert route(**{**GOOD, "category": "billing"}).action == "human_review"
+
+
+def test_account_follows_normal_rules():
+    # Spec demo: "how do I reset my password?" (account/low) is auto-replied.
+    assert route(**{**GOOD, "category": "account"}).action == "auto_send"
 
 
 def test_low_kb_score_goes_to_human():

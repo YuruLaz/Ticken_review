@@ -12,6 +12,8 @@ class TicketState(TypedDict, total=False):
     category: str
     priority: str
     sentiment: str
+    language: str
+    summary: str
     classification_confidence: float
 
     # retrieve (stub until RAG in step 12)

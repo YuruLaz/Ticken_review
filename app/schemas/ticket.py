@@ -35,6 +35,7 @@ class TicketRead(BaseModel):
     priority: str | None
     sentiment: str | None
     language: str | None
+    ai_summary: str | None
     created_at: datetime
     updated_at: datetime
 

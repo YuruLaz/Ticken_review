@@ -7,8 +7,12 @@ MIN_KB_SCORE = 0.65
 MIN_CLASSIFICATION_CONFIDENCE = 0.75
 MIN_DRAFT_CONFIDENCE = 0.80
 
-# Money and account access: a wrong auto-reply here is costly, however confident the model is.
-ALWAYS_REVIEW_CATEGORIES = {"billing", "account"}
+# Money: a wrong auto-reply here is costly, however confident the model is. Stricter than the
+# spec, which would auto-send purely informational billing replies; this needs no refund-promise check.
+ALWAYS_REVIEW_CATEGORIES = {"billing"}
+
+# Only low and medium priority tickets may be answered without a human (spec 4.4).
+HUMAN_PRIORITIES = {"high", "urgent"}
 
 
 @dataclass
@@ -29,8 +33,8 @@ def route(
     # Collect every reason instead of stopping at the first one, so the agent sees the full picture.
     reasons = []
 
-    if priority == "urgent":
-        reasons.append("urgent priority")
+    if priority in HUMAN_PRIORITIES:
+        reasons.append(f"{priority} priority")
     if sentiment == "angry":
         reasons.append("angry customer")
     if category in ALWAYS_REVIEW_CATEGORIES:

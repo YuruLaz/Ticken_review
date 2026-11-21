@@ -3,7 +3,8 @@ from sqlalchemy import select
 from app.ai import triage
 from app.models import Ticket, TicketMessage, TriageRun, User
 
-CLASSIFIED = {"category": "shipping", "priority": "low", "sentiment": "neutral", "classification_confidence": 0.9}
+CLASSIFIED = {"category": "shipping", "priority": "low", "sentiment": "neutral", "language": "en",
+              "summary": "Customer asks where their order is.", "classification_confidence": 0.9}
 DRAFTED = {
     **CLASSIFIED,
     "kb_articles": [{"id": 7, "title": "Shipping", "content": "...", "score": 0.7}],
@@ -53,6 +54,8 @@ async def test_auto_send_saves_reply_as_ai_message(session_maker, monkeypatch):
 
     assert ticket.status == "replied"
     assert ticket.category == "shipping"
+    assert ticket.language == "en"
+    assert ticket.ai_summary == "Customer asks where their order is."
     assert len(runs) == 1
     assert runs[0].route == "auto_send"
     assert runs[0].kb_article_ids == [7]

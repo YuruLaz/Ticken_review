@@ -23,6 +23,7 @@ class Ticket(Base):
     priority: Mapped[str | None] = mapped_column(String(20))
     sentiment: Mapped[str | None] = mapped_column(String(20))
     language: Mapped[str | None] = mapped_column(String(10))
+    ai_summary: Mapped[str | None] = mapped_column(String(200))
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

@@ -38,6 +38,8 @@ async def run_triage(graph, ticket_id: int, graph_input: dict | None) -> None:
         ticket.category = state["category"]
         ticket.priority = state["priority"]
         ticket.sentiment = state["sentiment"]
+        ticket.language = state["language"]
+        ticket.ai_summary = state["summary"][:200]  # the column's limit; the LLM may overshoot
         ticket.status = STATUS_BY_ROUTE[state["route"]]
 
         # .get() for the draft fields: a spam ticket stops after classify and never sets them.

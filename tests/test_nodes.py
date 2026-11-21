@@ -6,12 +6,14 @@ TICKET = {"ticket_id": 1, "subject": "Where is my order?", "body": "Order 123 is
 
 def test_classify(fake_llm):
     fake_llm.answers = [
-        TicketClassification(category="shipping", priority="low", sentiment="neutral", confidence=0.9)
+        TicketClassification(category="shipping", priority="low", sentiment="neutral", language="en",
+                             summary="Customer asks where order 123 is.", confidence=0.9)
     ]
 
     result = nodes.classify(TICKET)
 
     assert result["category"] == "shipping"
+    assert result["language"] == "en"
     assert result["classification_confidence"] == 0.9
     # Guards against the bug where the prompt was built without the ticket in it.
     assert "Where is my order?" in fake_llm.prompts[0]
@@ -20,10 +22,11 @@ def test_classify(fake_llm):
 def test_draft_counts_attempts(fake_llm):
     fake_llm.answers = [DraftReply(reply="It ships soon.", confidence=0.8, cited_article_ids=[1])]
 
-    result = nodes.draft({**TICKET, "kb_articles": [], "attempts": 1})
+    result = nodes.draft({**TICKET, "language": "ka", "kb_articles": [], "attempts": 1})
 
     assert result["draft_reply"] == "It ships soon."
     assert result["attempts"] == 2
+    assert "ISO 639-1 code: ka" in fake_llm.prompts[0]
 
 
 def test_quality_check_passes_good_reply():

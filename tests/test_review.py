@@ -3,6 +3,7 @@ from sqlalchemy import select
 
 from app.main import app
 from app.models import Ticket, TriageRun, User
+from app.routers import review
 
 PASSWORD = "secret123"
 
@@ -70,7 +71,7 @@ async def test_detail_shows_draft_and_reasons(client, setup):
 async def test_edit_resumes_graph_and_sends_agent_reply(client, setup, session_maker):
     response = await client.post(
         f"/review/{setup['ticket_id']}/decision",
-        json={"action": "edit", "edited_reply": "Refund issued."},
+        json={"action": "edit", "edited_reply": "Refund issued.", "note": "Softened the tone"},
         headers=setup["agent"],
     )
 
@@ -80,7 +81,9 @@ async def test_edit_resumes_graph_and_sends_agent_reply(client, setup, session_m
     assert response.json()["messages"][-1]["body"] == "Refund issued."
     assert setup["graph"].resumed_with == {"action": "edit", "reply": "Refund issued."}
     async with session_maker() as session:
-        assert (await session.scalar(select(TriageRun))).human_decision == "edit"
+        run = await session.scalar(select(TriageRun))
+    assert run.human_decision == "edit"
+    assert run.review_note == "Softened the tone"
 
 
 async def test_reject_escalates_without_a_message(client, setup):
@@ -97,5 +100,30 @@ async def test_second_decision_returns_409(client, setup):
     await client.post(url, json={"action": "approve"}, headers=setup["agent"])
 
     response = await client.post(url, json={"action": "approve"}, headers=setup["agent"])
+
+    assert response.status_code == 409
+
+
+async def test_retriage_restarts_a_failed_ticket(client, setup, session_maker, monkeypatch):
+    calls = []
+
+    async def fake_run_triage(graph, ticket_id, graph_input):
+        calls.append((ticket_id, graph_input))
+
+    monkeypatch.setattr(review, "run_triage", fake_run_triage)
+    async with session_maker() as session:
+        (await session.get(Ticket, setup["ticket_id"])).status = "failed"
+        await session.commit()
+
+    response = await client.post(f"/review/{setup['ticket_id']}/retriage", headers=setup["agent"])
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "new"
+    # None = continue from the last checkpoint, not start over.
+    assert calls == [(setup["ticket_id"], None)]
+
+
+async def test_retriage_refuses_a_ticket_that_did_not_fail(client, setup):
+    response = await client.post(f"/review/{setup['ticket_id']}/retriage", headers=setup["agent"])
 
     assert response.status_code == 409

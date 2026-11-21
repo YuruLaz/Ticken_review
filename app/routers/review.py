@@ -1,10 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from langgraph.types import Command
 from sqlalchemy import case, select
 
-from app.ai.triage import thread_config
+from app.ai.triage import run_triage, thread_config
 from app.core.dependencies import SessionDep, require_role
 from app.models import KBArticle, Ticket, TicketMessage, TriageRun, User
 from app.routers.tickets import get_visible_ticket
@@ -58,6 +58,9 @@ async def review_detail(ticket_id: int, user: Agent, session: SessionDep):
 async def decide(
     ticket_id: int, decision: Decision, user: Agent, session: SessionDep, request: Request
 ):
+    # Row lock until commit: if two agents decide at once, the second waits here, then
+    # sees the first one's new status below and gets a 409 instead of resuming twice.
+    await session.execute(select(Ticket.id).where(Ticket.id == ticket_id).with_for_update())
     ticket = await get_visible_ticket(session, ticket_id, user)
     # Also what stops a second decision: after the first, the status is replied or escalated.
     if ticket.status != "awaiting_review":
@@ -76,6 +79,7 @@ async def decide(
 
     run = await latest_run(session, ticket_id)
     run.human_decision = decision.action
+    run.review_note = decision.note
     if state["final_reply"]:
         # Appended to the relationship, so the returned ticket already includes it.
         ticket.messages.append(
@@ -86,4 +90,27 @@ async def decide(
         # Rejected draft: nothing is sent, a human has to handle the ticket.
         ticket.status = "escalated"
     await session.commit()
+    return ticket
+
+
+@router.post("/{ticket_id}/retriage", response_model=TicketRead, status_code=status.HTTP_202_ACCEPTED)
+async def retriage(
+    ticket_id: int,
+    user: Agent,
+    session: SessionDep,
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    # Same row lock as in decide: two clicks at once can't both see "failed".
+    await session.execute(select(Ticket.id).where(Ticket.id == ticket_id).with_for_update())
+    ticket = await get_visible_ticket(session, ticket_id, user)
+    if ticket.status != "failed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Only failed tickets can be re-run"
+        )
+    # Back to "new" right away, so a second click gets a 409 instead of starting a second run.
+    ticket.status = "new"
+    await session.commit()
+    # None: continue the failed run from its last checkpoint instead of starting over.
+    background_tasks.add_task(run_triage, request.app.state.graph, ticket_id, None)
     return ticket

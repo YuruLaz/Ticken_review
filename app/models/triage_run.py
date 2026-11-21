@@ -28,5 +28,6 @@ class TriageRun(Base):
     # Stored so the agent sees why a ticket was flagged, and so the thresholds can be measured later.
     route_reasons: Mapped[list[str]] = mapped_column(JSON, default=list)
     human_decision: Mapped[str | None] = mapped_column(String(20))  # approve | edit | reject
+    review_note: Mapped[str | None] = mapped_column(Text)  # the agent's optional comment on the decision
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

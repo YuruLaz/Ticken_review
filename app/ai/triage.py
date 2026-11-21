@@ -1,5 +1,9 @@
+import logging
+
 from app.database.db import SessionLocal
 from app.models import Ticket, TicketMessage, TriageRun
+
+logger = logging.getLogger(__name__)
 
 STATUS_BY_ROUTE = {"spam": "spam", "auto_send": "replied", "human_review": "awaiting_review"}
 
@@ -9,13 +13,25 @@ def thread_config(ticket_id: int) -> dict:
     return {"configurable": {"thread_id": str(ticket_id)}}
 
 
-async def run_triage(graph, ticket_id: int, subject: str, body: str) -> None:
-    """Runs the graph for a new ticket and saves what it produced. Meant to run in the background."""
+async def run_triage(graph, ticket_id: int, graph_input: dict | None) -> None:
+    """Runs the graph for a ticket and saves what it produced. Meant to run in the background.
+
+    graph_input is the new ticket's subject/body, or None to continue a failed run from its
+    last checkpoint, so steps that already succeeded (and their LLM calls) aren't repeated.
+    """
     # No session is open during the graph run: LLM calls take seconds, and an open
     # session would hold a pooled database connection the whole time.
-    state = await graph.ainvoke(
-        {"ticket_id": ticket_id, "subject": subject, "body": body}, thread_config(ticket_id)
-    )
+    try:
+        state = await graph.ainvoke(graph_input, thread_config(ticket_id))
+    except Exception:
+        # Any failure (Gemini error, rate limit, timeout): nobody sees a background task's
+        # exception, so log it and mark the ticket so an agent can find and re-run it.
+        logger.exception("Triage failed for ticket %s", ticket_id)
+        async with SessionLocal() as session:
+            ticket = await session.get(Ticket, ticket_id)
+            ticket.status = "failed"
+            await session.commit()
+        return
 
     async with SessionLocal() as session:
         ticket = await session.get(Ticket, ticket_id)

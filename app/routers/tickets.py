@@ -47,7 +47,8 @@ async def create_ticket(
     session.add(ticket)
     await session.commit()
     # Runs after the response is sent: the customer gets their ticket id now, not after the LLM calls.
-    background_tasks.add_task(run_triage, request.app.state.graph, ticket.id, ticket.subject, ticket.body)
+    graph_input = {"ticket_id": ticket.id, "subject": ticket.subject, "body": ticket.body}
+    background_tasks.add_task(run_triage, request.app.state.graph, ticket.id, graph_input)
     return ticket
 
 

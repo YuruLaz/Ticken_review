@@ -15,12 +15,14 @@ DRAFTED = {
 
 
 class FakeGraph:
-    """Returns a prepared final state, so these tests check only what run_triage saves."""
+    """Returns a prepared final state (or raises a prepared error), so these tests check only what run_triage saves."""
 
     def __init__(self, state):
         self.state = state
 
     async def ainvoke(self, input, config):
+        if isinstance(self.state, Exception):
+            raise self.state
         return self.state
 
 
@@ -34,7 +36,7 @@ async def run(session_maker, monkeypatch, state):
         session.add(ticket)
         await session.commit()
 
-    await triage.run_triage(FakeGraph(state), ticket.id, ticket.subject, ticket.body)
+    await triage.run_triage(FakeGraph(state), ticket.id, {"subject": ticket.subject, "body": ticket.body})
 
     # A fresh session, so we read what run_triage committed, not objects cached in memory.
     async with session_maker() as session:
@@ -77,4 +79,12 @@ async def test_spam_saves_run_without_draft_fields(session_maker, monkeypatch):
     assert runs[0].draft_reply is None
     assert runs[0].kb_article_ids == []
     assert runs[0].attempts == 0
+    assert messages == []
+
+
+async def test_graph_error_marks_ticket_failed(session_maker, monkeypatch):
+    ticket, runs, messages = await run(session_maker, monkeypatch, RuntimeError("Gemini is down"))
+
+    assert ticket.status == "failed"
+    assert runs == []
     assert messages == []

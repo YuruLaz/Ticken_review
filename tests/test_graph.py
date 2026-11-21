@@ -98,3 +98,18 @@ async def test_agent_reject_sends_nothing(fake_llm):
 
     assert result["review_action"] == "reject"
     assert result["final_reply"] == ""
+
+
+async def test_failed_run_continues_from_last_checkpoint(fake_llm):
+    fake_llm.answers = [classification()]  # no draft answer queued, so draft fails (like a Gemini error)
+    graph = new_graph()
+    with pytest.raises(IndexError):
+        await graph.ainvoke(TICKET, CONFIG)
+
+    fake_llm.answers = [reply()]
+    # None = no new input: continue the thread from its last saved step, which re-runs draft.
+    result = await graph.ainvoke(None, CONFIG)
+
+    assert result["route"] == "human_review"
+    # classify was not called again: one prompt for it, one per draft attempt.
+    assert len(fake_llm.prompts) == 3

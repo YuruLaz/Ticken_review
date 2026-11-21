@@ -18,6 +18,7 @@ class TriageRunRead(BaseModel):
     route: str
     route_reasons: list[str]
     human_decision: str | None
+    review_note: str | None
     created_at: datetime
 
 
@@ -37,3 +38,4 @@ class ReviewDetail(BaseModel):
 class Decision(BaseModel):
     action: Literal["approve", "edit", "reject"]
     edited_reply: str | None = None  # required when action is "edit"
+    note: str | None = None

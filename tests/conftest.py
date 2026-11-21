@@ -1,4 +1,10 @@
-import pytest
+import os
+
+# Set before the app is imported (its load_dotenv() doesn't override): tests use a fake LLM
+# and must not send traces to LangSmith.
+os.environ["LANGSMITH_TRACING"] = "false"
+
+import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.engine import make_url

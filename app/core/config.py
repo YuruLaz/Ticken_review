@@ -1,8 +1,14 @@
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Settings only reads .env into its own fields. LangSmith reads LANGSMITH_* straight from the
+# environment, so .env is loaded into it too. Variables already set (e.g. by tests) win.
+load_dotenv()
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env")
+    # ignore: .env also holds variables for other libraries (LANGSMITH_*), not just these fields.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str
     jwt_secret_key: str

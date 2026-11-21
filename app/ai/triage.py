@@ -4,13 +4,18 @@ from app.models import Ticket, TicketMessage, TriageRun
 STATUS_BY_ROUTE = {"spam": "spam", "auto_send": "replied", "human_review": "awaiting_review"}
 
 
+def thread_config(ticket_id: int) -> dict:
+    # One ticket = one graph thread, so a paused ticket can be resumed later by its id.
+    return {"configurable": {"thread_id": str(ticket_id)}}
+
+
 async def run_triage(graph, ticket_id: int, subject: str, body: str) -> None:
     """Runs the graph for a new ticket and saves what it produced. Meant to run in the background."""
-    # One ticket = one graph thread, so a paused ticket can be resumed later by its id.
-    config = {"configurable": {"thread_id": str(ticket_id)}}
     # No session is open during the graph run: LLM calls take seconds, and an open
     # session would hold a pooled database connection the whole time.
-    state = await graph.ainvoke({"ticket_id": ticket_id, "subject": subject, "body": body}, config)
+    state = await graph.ainvoke(
+        {"ticket_id": ticket_id, "subject": subject, "body": body}, thread_config(ticket_id)
+    )
 
     async with SessionLocal() as session:
         ticket = await session.get(Ticket, ticket_id)

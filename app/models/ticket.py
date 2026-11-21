@@ -8,6 +8,9 @@ from app.database.base import Base
 
 class Ticket(Base):
     __tablename__ = "tickets"
+    # Fetch updated_at (set by the database on UPDATE) in the same statement; otherwise reading
+    # it after a commit triggers a lazy reload, which fails in async code (MissingGreenlet).
+    __mapper_args__ = {"eager_defaults": True}
 
     id: Mapped[int] = mapped_column(primary_key=True)
     customer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)

@@ -7,7 +7,7 @@ from psycopg_pool import AsyncConnectionPool
 
 from app.ai.graph import build_graph
 from app.core.config import settings
-from app.routers import auth, tickets
+from app.routers import auth, review, tickets
 
 
 @asynccontextmanager
@@ -31,3 +31,4 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="SupportDesk AI", lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(tickets.router)
+app.include_router(review.router)

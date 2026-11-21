@@ -1,9 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.ai.triage import run_triage
 from app.core.dependencies import CurrentUser, SessionDep, require_role
 from app.models import Ticket, TicketMessage, User
 from app.schemas.ticket import (
@@ -35,10 +36,18 @@ async def get_visible_ticket(session: SessionDep, ticket_id: int, user: User) ->
 
 
 @router.post("", response_model=TicketRead, status_code=status.HTTP_201_CREATED)
-async def create_ticket(data: TicketCreate, user: Customer, session: SessionDep):
+async def create_ticket(
+    data: TicketCreate,
+    user: Customer,
+    session: SessionDep,
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
     ticket = Ticket(customer_id=user.id, subject=data.subject, body=data.body)
     session.add(ticket)
     await session.commit()
+    # Runs after the response is sent: the customer gets their ticket id now, not after the LLM calls.
+    background_tasks.add_task(run_triage, request.app.state.graph, ticket.id, ticket.subject, ticket.body)
     return ticket
 
 

@@ -15,9 +15,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
-    # Empty default so the app and tests start without a key; only real LLM calls need it.
+    # Empty defaults so the app and tests start without keys; only real LLM calls need them.
+    # Claude writes (classify, draft); Gemini only embeds (Anthropic has no embedding model).
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-haiku-5-5"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
 
 
 settings = Settings()

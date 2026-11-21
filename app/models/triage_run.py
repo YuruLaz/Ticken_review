@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from sqlalchemy import JSON, ForeignKey, String, Text, func
@@ -29,5 +30,8 @@ class TriageRun(Base):
     route_reasons: Mapped[list[str]] = mapped_column(JSON, default=list)
     human_decision: Mapped[str | None] = mapped_column(String(20))  # approve | edit | reject
     review_note: Mapped[str | None] = mapped_column(Text)  # the agent's optional comment on the decision
+    # The trace's ID in LangSmith (paste into its search). An ID, not a URL: building the URL
+    # would need LangSmith API lookups after every run.
+    langsmith_run_id: Mapped[uuid.UUID | None]
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

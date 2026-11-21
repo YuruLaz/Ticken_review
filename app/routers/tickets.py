@@ -8,6 +8,8 @@ from app.ai.triage import run_triage
 from app.core.dependencies import CurrentUser, SessionDep, require_role
 from app.models import Ticket, TicketMessage, User
 from app.schemas.ticket import (
+    AgentTicketDetail,
+    AgentTicketRead,
     MessageCreate,
     MessageRead,
     TicketCreate,
@@ -52,17 +54,22 @@ async def create_ticket(
     return ticket
 
 
-@router.get("", response_model=list[TicketRead])
+# Both roles share these routes, so the schema is picked per request; the union in
+# response_model lets FastAPI serialize whichever one was returned.
+@router.get("", response_model=list[AgentTicketRead] | list[TicketRead])
 async def list_tickets(user: CurrentUser, session: SessionDep):
     query = select(Ticket).order_by(Ticket.created_at.desc())
     if user.role == "customer":
         query = query.where(Ticket.customer_id == user.id)
-    return await session.scalars(query)
+    schema = TicketRead if user.role == "customer" else AgentTicketRead
+    return [schema.model_validate(ticket) for ticket in await session.scalars(query)]
 
 
-@router.get("/{ticket_id}", response_model=TicketDetail)
+@router.get("/{ticket_id}", response_model=AgentTicketDetail | TicketDetail)
 async def get_ticket(ticket_id: int, user: CurrentUser, session: SessionDep):
-    return await get_visible_ticket(session, ticket_id, user)
+    ticket = await get_visible_ticket(session, ticket_id, user)
+    schema = TicketDetail if user.role == "customer" else AgentTicketDetail
+    return schema.model_validate(ticket)
 
 
 @router.post(
@@ -71,11 +78,22 @@ async def get_ticket(ticket_id: int, user: CurrentUser, session: SessionDep):
     status_code=status.HTTP_201_CREATED,
 )
 async def add_message(
-    ticket_id: int, data: MessageCreate, user: Customer, session: SessionDep
+    ticket_id: int, data: MessageCreate, user: CurrentUser, session: SessionDep
 ):
     ticket = await get_visible_ticket(session, ticket_id, user)
+    if user.role == "customer":
+        sender_type = "customer"
+    else:
+        # The graph is paused on this ticket; replying here would leave it paused forever.
+        if ticket.status == "awaiting_review":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ticket is awaiting review: use POST /review/{id}/decision",
+            )
+        sender_type = "agent"
+        ticket.status = "replied"
     message = TicketMessage(
-        ticket_id=ticket.id, sender_type="customer", author_id=user.id, body=data.body
+        ticket_id=ticket.id, sender_type=sender_type, author_id=user.id, body=data.body
     )
     session.add(message)
     await session.commit()

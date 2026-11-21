@@ -4,12 +4,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from langgraph.types import Command
 from sqlalchemy import case, select
 
-from app.ai.triage import run_triage, thread_config
+from app.ai.triage import graph_config, run_triage
 from app.core.dependencies import SessionDep, require_role
 from app.models import KBArticle, Ticket, TicketMessage, TriageRun, User
 from app.routers.tickets import get_visible_ticket
 from app.schemas.review import Decision, ReviewDetail
-from app.schemas.ticket import TicketDetail, TicketRead
+from app.schemas.ticket import AgentTicketDetail, AgentTicketRead
 
 router = APIRouter(prefix="/review", tags=["review"])
 
@@ -30,7 +30,7 @@ async def latest_run(session, ticket_id: int) -> TriageRun:
     )
 
 
-@router.get("/queue", response_model=list[TicketRead])
+@router.get("/queue", response_model=list[AgentTicketRead])
 async def review_queue(user: Agent, session: SessionDep):
     query = (
         select(Ticket)
@@ -54,7 +54,7 @@ async def review_detail(ticket_id: int, user: Agent, session: SessionDep):
     return {"ticket": ticket, "run": run, "kb_articles": articles.all()}
 
 
-@router.post("/{ticket_id}/decision", response_model=TicketDetail)
+@router.post("/{ticket_id}/decision", response_model=AgentTicketDetail)
 async def decide(
     ticket_id: int, decision: Decision, user: Agent, session: SessionDep, request: Request
 ):
@@ -75,7 +75,8 @@ async def decide(
 
     # Continues the paused graph: human_review runs again and interrupt() returns this dict.
     resume = {"action": decision.action, "reply": decision.edited_reply}
-    state = await request.app.state.graph.ainvoke(Command(resume=resume), thread_config(ticket_id))
+    config = graph_config(ticket_id, "review_decision", ticket.category)
+    state = await request.app.state.graph.ainvoke(Command(resume=resume), config)
 
     run = await latest_run(session, ticket_id)
     run.human_decision = decision.action
@@ -93,7 +94,7 @@ async def decide(
     return ticket
 
 
-@router.post("/{ticket_id}/retriage", response_model=TicketRead, status_code=status.HTTP_202_ACCEPTED)
+@router.post("/{ticket_id}/retriage", response_model=AgentTicketRead, status_code=status.HTTP_202_ACCEPTED)
 async def retriage(
     ticket_id: int,
     user: Agent,

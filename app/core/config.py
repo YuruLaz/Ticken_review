@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    # Tagged on every LangSmith trace, so runs from different setups can be told apart.
+    environment: str = "dev"
 
     # Empty defaults so the app and tests start without keys; only real LLM calls need them.
     # Claude writes (classify, draft); Gemini only embeds (Anthropic has no embedding model).

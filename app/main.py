@@ -6,12 +6,14 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
 from app.ai.graph import build_graph
+from app.ai.tracing import setup_tracing
 from app.core.config import settings
 from app.routers import auth, review, tickets
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_tracing()
     # The checkpointer uses psycopg, not asyncpg, so it needs the plain postgresql:// URL.
     conn_string = settings.database_url.replace("+asyncpg", "")
     # A pool, not one shared connection: concurrent tickets save checkpoints in parallel, and

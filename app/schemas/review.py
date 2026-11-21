@@ -1,9 +1,10 @@
+import uuid
 from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from app.schemas.ticket import TicketDetail
+from app.schemas.ticket import AgentTicketDetail
 
 
 class TriageRunRead(BaseModel):
@@ -19,6 +20,7 @@ class TriageRunRead(BaseModel):
     route_reasons: list[str]
     human_decision: str | None
     review_note: str | None
+    langsmith_run_id: uuid.UUID | None
     created_at: datetime
 
 
@@ -30,7 +32,7 @@ class KBArticleBrief(BaseModel):
 
 
 class ReviewDetail(BaseModel):
-    ticket: TicketDetail
+    ticket: AgentTicketDetail
     run: TriageRunRead
     kb_articles: list[KBArticleBrief]
 

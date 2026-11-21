@@ -59,6 +59,7 @@ async def test_auto_send_saves_reply_as_ai_message(session_maker, monkeypatch):
     assert len(runs) == 1
     assert runs[0].route == "auto_send"
     assert runs[0].kb_article_ids == [7]
+    assert runs[0].langsmith_run_id is not None
     assert [(m.sender_type, m.body) for m in messages] == [("ai", "Your order ships tomorrow.")]
 
 

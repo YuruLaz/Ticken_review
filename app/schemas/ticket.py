@@ -33,13 +33,22 @@ class TicketRead(BaseModel):
     body: str
     status: str
     category: str | None
-    priority: str | None
-    sentiment: str | None
     language: str | None
-    ai_summary: str | None
     created_at: datetime
     updated_at: datetime
 
 
 class TicketDetail(TicketRead):
+    messages: list[MessageRead]
+
+
+# What agents and admins see: adds the AI's internal signals. Kept out of the customer view so a
+# customer never reads that they were labelled "angry" or sees the agent-facing summary.
+class AgentTicketRead(TicketRead):
+    priority: str | None
+    sentiment: str | None
+    ai_summary: str | None
+
+
+class AgentTicketDetail(AgentTicketRead):
     messages: list[MessageRead]

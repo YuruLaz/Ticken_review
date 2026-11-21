@@ -38,7 +38,8 @@ async def setup(client, session_maker, monkeypatch):
     async with session_maker() as session:
         (await session.scalar(select(User).where(User.email == "agent@example.com"))).role = "agent"
         owner = await session.scalar(select(User).where(User.email == "customer@example.com"))
-        ticket = Ticket(customer_id=owner.id, subject="Refund", body="Charged twice.", status="awaiting_review")
+        ticket = Ticket(customer_id=owner.id, subject="Refund", body="Charged twice.", status="awaiting_review",
+                        sentiment="angry")
         session.add(ticket)
         await session.flush()  # assigns ticket.id
         session.add(TriageRun(ticket_id=ticket.id, draft_reply="Draft reply.", route="human_review",
@@ -125,5 +126,34 @@ async def test_retriage_restarts_a_failed_ticket(client, setup, session_maker, m
 
 async def test_retriage_refuses_a_ticket_that_did_not_fail(client, setup):
     response = await client.post(f"/review/{setup['ticket_id']}/retriage", headers=setup["agent"])
+
+    assert response.status_code == 409
+
+
+async def test_customer_does_not_see_internal_ai_fields(client, setup):
+    as_customer = (await client.get(f"/tickets/{setup['ticket_id']}", headers=setup["customer"])).json()
+    as_agent = (await client.get(f"/tickets/{setup['ticket_id']}", headers=setup["agent"])).json()
+
+    assert "sentiment" not in as_customer and "ai_summary" not in as_customer
+    assert as_agent["sentiment"] == "angry"
+
+
+async def test_agent_reply_on_escalated_ticket_marks_it_replied(client, setup):
+    await client.post(f"/review/{setup['ticket_id']}/decision", json={"action": "reject"}, headers=setup["agent"])
+
+    response = await client.post(
+        f"/tickets/{setup['ticket_id']}/messages", json={"body": "We're on it."}, headers=setup["agent"]
+    )
+
+    assert response.status_code == 201
+    assert response.json()["sender_type"] == "agent"
+    ticket = (await client.get(f"/tickets/{setup['ticket_id']}", headers=setup["customer"])).json()
+    assert ticket["status"] == "replied"
+
+
+async def test_agent_cannot_reply_to_ticket_awaiting_review(client, setup):
+    response = await client.post(
+        f"/tickets/{setup['ticket_id']}/messages", json={"body": "Hi"}, headers=setup["agent"]
+    )
 
     assert response.status_code == 409

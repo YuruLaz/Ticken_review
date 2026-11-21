@@ -1,5 +1,7 @@
 import logging
+import uuid
 
+from app.core.config import settings
 from app.database.db import SessionLocal
 from app.models import Ticket, TicketMessage, TriageRun
 
@@ -8,9 +10,25 @@ logger = logging.getLogger(__name__)
 STATUS_BY_ROUTE = {"spam": "spam", "auto_send": "replied", "human_review": "awaiting_review"}
 
 
-def thread_config(ticket_id: int) -> dict:
-    # One ticket = one graph thread, so a paused ticket can be resumed later by its id.
-    return {"configurable": {"thread_id": str(ticket_id)}}
+def graph_config(
+    ticket_id: int, run_name: str, category: str | None = None, run_id: uuid.UUID | None = None
+) -> dict:
+    metadata = {"ticket_id": ticket_id, "environment": settings.environment}
+    # Unknown on the first run: classify sets it inside that run.
+    if category:
+        metadata["category"] = category
+    config = {
+        # One ticket = one graph thread, so a paused ticket can be resumed later by its id.
+        "configurable": {"thread_id": str(ticket_id)},
+        # The rest only labels the LangSmith trace, so runs can be found and filtered.
+        "run_name": run_name,
+        "tags": [run_name, settings.environment],
+        "metadata": metadata,
+    }
+    if run_id:
+        # Becomes the trace's ID in LangSmith, so we know it without asking LangSmith.
+        config["run_id"] = run_id
+    return config
 
 
 async def run_triage(graph, ticket_id: int, graph_input: dict | None) -> None:
@@ -22,9 +40,10 @@ async def run_triage(graph, ticket_id: int, graph_input: dict | None) -> None:
     # No session is open during the graph run: LLM calls take seconds, and an open
     # session would hold a pooled database connection the whole time.
     try:
-        state = await graph.ainvoke(graph_input, thread_config(ticket_id))
+        run_id = uuid.uuid4()
+        state = await graph.ainvoke(graph_input, graph_config(ticket_id, "triage", run_id=run_id))
     except Exception:
-        # Any failure (Gemini error, rate limit, timeout): nobody sees a background task's
+        # Any failure (LLM error, rate limit, timeout): nobody sees a background task's
         # exception, so log it and mark the ticket so an agent can find and re-run it.
         logger.exception("Triage failed for ticket %s", ticket_id)
         async with SessionLocal() as session:
@@ -53,6 +72,7 @@ async def run_triage(graph, ticket_id: int, graph_input: dict | None) -> None:
             attempts=state.get("attempts", 0),
             route=state["route"],
             route_reasons=state.get("route_reasons", []),
+            langsmith_run_id=run_id,
         ))
 
         if state["route"] == "auto_send":

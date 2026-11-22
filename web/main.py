@@ -101,11 +101,46 @@ async def logout():
     return response
 
 
+# --- customer portal ---
+
+# Customers see two states only; the internal ones (awaiting_review, failed, escalated...)
+# all mean "a person or the AI is still working on it" from their side.
+def customer_status(status: str) -> str:
+    return "Answered" if status == "replied" else "We're on it"
+
+
+templates.env.filters["customer_status"] = customer_status
+
+
+async def render_portal(request: Request, user: dict, **context):
+    tickets = await api.list_tickets(user["token"])
+    # Spam is hidden rather than labelled: telling a sender "marked as spam" helps nobody.
+    tickets = [t for t in tickets if t["status"] != "spam"]
+    context |= {"user": user, "tickets": tickets}
+    return templates.TemplateResponse(request, "portal.html", context)
+
+
 @app.get("/portal")
-async def portal(request: Request, user: User):
+async def portal(request: Request, user: User, sent: int | None = None):
     if user["role"] != "customer":
         return RedirectResponse(home_for(user), status_code=303)
-    return templates.TemplateResponse(request, "portal.html", {"user": user})
+    return await render_portal(request, user, sent=sent)
+
+
+@app.post("/portal/tickets")
+async def create_ticket(
+    request: Request,
+    user: User,
+    subject: Annotated[str, Form()],
+    body: Annotated[str, Form()],
+):
+    try:
+        ticket = await api.create_ticket(user["token"], subject, body)
+    except api.ApiError as error:
+        # Re-render with what they typed, so a failed send doesn't lose a long message.
+        return await render_portal(request, user, error=str(error), subject=subject, body=body)
+    # Redirect after POST: a browser refresh then reloads the page instead of resending the form.
+    return RedirectResponse(f"/portal?sent={ticket['id']}", status_code=303)
 
 
 # --- agent inbox ---

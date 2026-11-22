@@ -111,6 +111,8 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
   border: 1px solid var(--border);
 }
 
+.chip.answered { background: #ebfbee; border-color: #b2f2bb; color: var(--ok); }
+
 .alert { padding: .6rem .8rem; border-radius: var(--radius); }
 .alert.error { background: #fff5f5; color: var(--urgent); }
 .alert.success { background: #ebfbee; color: var(--ok); }

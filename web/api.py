@@ -60,6 +60,10 @@ async def list_tickets(token: str, **filters) -> list[dict]:
     return await request("GET", "/tickets", token, params=params)
 
 
+async def create_ticket(token: str, subject: str, body: str) -> dict:
+    return await request("POST", "/tickets", token, json={"subject": subject, "body": body})
+
+
 async def ticket_counts(token: str) -> dict[str, int]:
     return await request("GET", "/tickets/counts", token)
 

@@ -3,5 +3,39 @@
 
 {% block content %}
 <h1>How can we help?</h1>
-<p class="muted">Customer portal: the request form and "My requests" come in the next step.</p>
+
+{% if sent %}
+  <p class="alert success">Thanks! We got your request #{{ sent }} and will reply here soon.</p>
+{% endif %}
+
+{# Open by default only when there's something to do in it: first visit, or a failed send. #}
+<details class="card" {% if error or not tickets %}open{% endif %}>
+  <summary>New request</summary>
+  {% if error %}<p class="alert error">{{ error }}</p>{% endif %}
+  {# maxlength mirrors the API limits, so the browser stops the typing instead of the API rejecting it. #}
+  <form method="post" action="/portal/tickets" class="stack">
+    <label>Subject <input name="subject" maxlength="200" value="{{ subject or '' }}" required></label>
+    <label>What happened?
+      <textarea name="body" rows="6" maxlength="5000" required>{{ body or '' }}</textarea>
+    </label>
+    <button class="primary">Send request</button>
+  </form>
+</details>
+
+<h2>My requests</h2>
+{% for ticket in tickets %}
+  <div class="row">
+    <div class="row-main">
+      <div class="row-top">
+        <strong>#{{ ticket.id }} {{ ticket.subject }}</strong>
+        {% set label = ticket.status | customer_status %}
+        <span class="chip {{ 'answered' if label == 'Answered' }}">{{ label }}</span>
+      </div>
+      <div class="snippet">{{ ticket.body | truncate(100) }}</div>
+      <div class="small muted">{{ ticket.created_at | age }}</div>
+    </div>
+  </div>
+{% else %}
+  <p class="muted">You haven't sent any requests yet.</p>
+{% endfor %}
 {% endblock %}

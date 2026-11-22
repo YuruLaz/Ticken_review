@@ -1,0 +1,12 @@
+# Secrets come from env_file at runtime, never baked in.
+.env
+.venv/
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.vscode/
+.claude/
+docs/
+trace.json

@@ -40,3 +40,8 @@ app.include_router(tickets.router)
 app.include_router(review.router)
 app.include_router(analytics.router)
 app.include_router(kb.router)
+
+
+@app.get("/health", include_in_schema=False)
+async def health():
+    return {"status": "ok"}

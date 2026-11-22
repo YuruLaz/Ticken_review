@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · SupportDesk{% endblock %}
+{% block main_class %}page wide{% endblock %}
+
+{# One bar per key, length relative to the largest. `order` fixes the row order; else by count. #}
+{% macro bars(title, counts, order=none) %}
+  <section class="card">
+    <h2>{{ title }}</h2>
+    {% set keys = order if order else (counts | dictsort(by="value", reverse=true) | map("first") | list) %}
+    {% set top = (counts.values() | max) if counts else 1 %}
+    {% for key in keys if key in counts %}
+      <div class="bar-row" title="{{ key }}: {{ counts[key] }}">
+        <span class="bar-label">{{ key }}</span>
+        <span class="bar-track"><span class="bar" style="width: {{ counts[key] / top * 100 }}%"></span></span>
+        <span class="bar-value">{{ counts[key] }}</span>
+      </div>
+    {% else %}
+      <p class="muted small">No data yet.</p>
+    {% endfor %}
+  </section>
+{% endmacro %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+{% set routes = automation.routes %}
+<div class="tiles">
+  <div class="card tile">
+    <div class="tile-value">{{ automation.automation_rate | percent }}</div>
+    <div class="tile-label">Automation rate</div>
+    <div class="small muted">{{ routes.get("auto_send", 0) }} auto-sent of {{ routes.get("auto_send", 0) + routes.get("human_review", 0) }} (spam excluded)</div>
+  </div>
+  <div class="card tile">
+    <div class="tile-value">{{ accuracy.approval_rate | percent }}</div>
+    <div class="tile-label">Drafts approved unchanged</div>
+    <div class="small muted">of {{ accuracy.reviewed }} reviewed by an agent</div>
+  </div>
+  <div class="card tile">
+    <div class="tile-value">{{ overview.by_status.values() | sum }}</div>
+    <div class="tile-label">Tickets</div>
+    <div class="small muted">{{ overview.by_status.get("awaiting_review", 0) }} waiting for review</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  {{ bars("By category", overview.by_category) }}
+  {{ bars("By priority", overview.by_priority, ["urgent", "high", "medium", "low"]) }}
+  {{ bars("By status", overview.by_status) }}
+
+  <section class="card">
+    <h2>Agent decisions on AI drafts</h2>
+    {% if accuracy.decisions %}
+      <table class="data">
+        <thead><tr><th>Decision</th><th>Count</th><th>Avg. AI confidence</th></tr></thead>
+        <tbody>
+          {% for decision in ["approve", "edit", "reject"] if decision in accuracy.decisions %}
+            {% set row = accuracy.decisions[decision] %}
+            <tr><td>{{ decision }}</td><td>{{ row.count }}</td><td>{{ row.avg_draft_confidence | score }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {# The point of this table: rejected drafts should score lower than approved ones. #}
+      <p class="small muted">If rejected drafts score as high as approved ones, the confidence threshold isn't filtering much.</p>
+    {% else %}
+      <p class="muted small">No reviewed drafts yet.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

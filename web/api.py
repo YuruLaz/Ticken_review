@@ -91,3 +91,11 @@ async def decide(token: str, ticket_id: int, action: str, edited_reply: str | No
 
 async def retriage(token: str, ticket_id: int) -> dict:
     return await request("POST", f"/review/{ticket_id}/retriage", token)
+
+
+async def analytics(token: str) -> dict:
+    return {
+        "overview": await request("GET", "/analytics/overview", token),
+        "automation": await request("GET", "/analytics/automation-rate", token),
+        "accuracy": await request("GET", "/analytics/ai-accuracy", token),
+    }

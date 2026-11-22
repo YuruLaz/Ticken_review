@@ -12,6 +12,7 @@
     <a class="brand" href="/">ShopNest <span>Support</span></a>
     {% if user %}
       <div class="who">
+        {% if user.role == "admin" %}<a href="/inbox">Inbox</a> <a href="/admin">Dashboard</a>{% endif %}
         {{ user.full_name }} <span class="chip">{{ user.role }}</span>
         <form method="post" action="/logout"><button class="link">Log out</button></form>
       </div>

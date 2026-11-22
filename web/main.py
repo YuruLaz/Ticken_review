@@ -14,7 +14,7 @@ from markupsafe import escape
 
 from web import api
 from web.dependencies import LoginRequired
-from web.routers import auth, inbox, portal, workspace
+from web.routers import admin, auth, inbox, portal, workspace
 from web.templating import templates
 
 app = FastAPI(title="SupportDesk web")
@@ -24,6 +24,7 @@ app.include_router(auth.router)
 app.include_router(portal.router)
 app.include_router(inbox.router)
 app.include_router(workspace.router)
+app.include_router(admin.router)
 
 
 @app.exception_handler(LoginRequired)

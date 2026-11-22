@@ -26,3 +26,4 @@ def customer_status(status: str) -> str:
 templates.env.filters["age"] = age
 templates.env.filters["customer_status"] = customer_status
 templates.env.filters["score"] = lambda value: "–" if value is None else f"{value:.2f}"
+templates.env.filters["percent"] = lambda value: "–" if value is None else f"{value:.0%}"

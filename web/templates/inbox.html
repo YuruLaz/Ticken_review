@@ -23,8 +23,9 @@
            hx-get="/inbox/list" hx-include="#filters" hx-target="#list"
            hx-trigger="input changed delay:300ms, search">
   </form>
-  {# Refreshes itself, since the AI finishes tickets in the background. #}
-  <div id="list" hx-get="/inbox/list" hx-include="#filters" hx-trigger="every 20s">
+  {# Refreshes itself, since the AI finishes tickets in the background, and right after an
+     agent's action (ticketsChanged comes from the server's HX-Trigger header). #}
+  <div id="list" hx-get="/inbox/list" hx-include="#filters" hx-trigger="every 20s, ticketsChanged from:body">
     {% include "_ticket_list.html" %}
   </div>
 </section>

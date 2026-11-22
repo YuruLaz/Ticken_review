@@ -1,0 +1,12 @@
+{# Partial: a ticket's conversation. Expects `ticket` and `names` (sender_type -> label). #}
+{# The ticket body is the customer's first message; ticket.messages holds everything after it. #}
+<div class="msg customer">
+  <div class="small muted">{{ names.customer }} · {{ ticket.created_at | age }}</div>
+  <div class="msg-body">{{ ticket.body }}</div>
+</div>
+{% for message in ticket.messages %}
+  <div class="msg {{ message.sender_type }}">
+    <div class="small muted">{{ names[message.sender_type] }} · {{ message.created_at | age }}</div>
+    <div class="msg-body">{{ message.body }}</div>
+  </div>
+{% endfor %}

@@ -1,0 +1,70 @@
+{# Partial: one ticket in the agent's right pane. Loaded with htmx; every form here swaps this
+   same pane, so after an action the agent sees the ticket's new state in place. #}
+<div class="ws-head">
+  <h1>#{{ ticket.id }} {{ ticket.subject }}</h1>
+  <div class="small muted">
+    <span class="chip">{{ ticket.status }}</span>
+    <span class="dot inline {{ ticket.priority or '' }}"></span> {{ ticket.priority or "no priority" }}
+    · {{ ticket.category or "not classified" }}
+    {% if ticket.sentiment %}· {{ ticket.sentiment | mood }} {{ ticket.sentiment }}{% endif %}
+    {% if ticket.language %}· {{ ticket.language }}{% endif %}
+    · {{ ticket.created_at | age }}
+  </div>
+</div>
+
+{% if error %}<p class="alert error">{{ error }}</p>{% endif %}
+
+{% set names = {"customer": "Customer", "ai": "AI (auto-sent)", "agent": "Agent"} %}
+{% include "_conversation.html" %}
+
+{% if run %}
+  <details class="card ai-panel" {{ 'open' if ticket.status == 'awaiting_review' }}>
+    <summary>AI analysis</summary>
+    {% if ticket.ai_summary %}<p>{{ ticket.ai_summary }}</p>{% endif %}
+    <p><strong>Route:</strong> {{ run.route }}
+      {% if run.human_decision %}· agent chose <strong>{{ run.human_decision }}</strong>{% endif %}</p>
+    {% if run.route_reasons %}
+      <ul>{% for reason in run.route_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+    {% endif %}
+    <div class="scores">
+      <span>Classification <strong>{{ run.classification_confidence | score }}</strong></span>
+      <span>Draft <strong>{{ run.draft_confidence | score }}</strong></span>
+      <span>Best KB match <strong>{{ run.best_kb_score | score }}</strong></span>
+      <span>Attempts <strong>{{ run.attempts }}</strong></span>
+    </div>
+    {% if kb_articles %}
+      <p class="small"><strong>Sources:</strong>
+        {% for article in kb_articles %}[{{ article.id }}] {{ article.title }}{{ "; " if not loop.last }}{% endfor %}</p>
+    {% endif %}
+    {% if run.review_note %}<p class="small"><strong>Note:</strong> {{ run.review_note }}</p>{% endif %}
+    {% if run.langsmith_run_id %}<p class="small muted">LangSmith run {{ run.langsmith_run_id }}</p>{% endif %}
+  </details>
+{% endif %}
+
+{% set base = "/inbox/tickets/" ~ ticket.id %}
+{% if ticket.status == "awaiting_review" %}
+  <form class="stack card" hx-post="{{ base }}/decision" hx-target="#workspace">
+    {# Sent back so the server can tell "approve" (untouched) from "edit". #}
+    <input type="hidden" name="draft" value="{{ run.draft_reply }}">
+    <label>AI draft (edit it before sending if needed)
+      <textarea name="reply" rows="10">{{ run.draft_reply }}</textarea>
+    </label>
+    <label>Note (optional, internal) <input name="note"></label>
+    <div class="actions">
+      <button class="primary" name="action" value="approve">Send reply</button>
+      <button name="action" value="reject">Reject draft</button>
+    </div>
+  </form>
+{% elif ticket.status == "failed" %}
+  <div class="card">
+    <p>The AI pipeline failed on this ticket.</p>
+    <button class="primary" hx-post="{{ base }}/retriage" hx-target="#workspace">Re-run AI</button>
+  </div>
+{% elif ticket.status == "new" %}
+  <p class="muted">The AI is still working on this ticket.</p>
+{% elif ticket.status != "spam" %}
+  <form class="stack card" hx-post="{{ base }}/reply" hx-target="#workspace">
+    <label>Reply to customer <textarea name="body" rows="5" required></textarea></label>
+    <button class="primary">Send reply</button>
+  </form>
+{% endif %}

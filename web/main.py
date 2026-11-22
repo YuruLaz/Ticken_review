@@ -112,11 +112,15 @@ def customer_status(status: str) -> str:
 templates.env.filters["customer_status"] = customer_status
 
 
+# Shown as the subject choices. Only a hint: the AI still classifies every ticket itself.
+TOPICS = ["Billing or payment", "Order and shipping", "Account and login", "Technical problem", "General question"]
+
+
 async def render_portal(request: Request, user: dict, **context):
     tickets = await api.list_tickets(user["token"])
     # Spam is hidden rather than labelled: telling a sender "marked as spam" helps nobody.
     tickets = [t for t in tickets if t["status"] != "spam"]
-    context |= {"user": user, "tickets": tickets}
+    context |= {"user": user, "tickets": tickets, "topics": TOPICS}
     return templates.TemplateResponse(request, "portal.html", context)
 
 
@@ -131,16 +135,39 @@ async def portal(request: Request, user: User, sent: int | None = None):
 async def create_ticket(
     request: Request,
     user: User,
-    subject: Annotated[str, Form()],
+    topic: Annotated[str, Form()],
     body: Annotated[str, Form()],
+    subject: Annotated[str | None, Form()] = None,  # only sent when the topic is "other"
 ):
+    if topic != "other":
+        subject = topic
     try:
         ticket = await api.create_ticket(user["token"], subject, body)
     except api.ApiError as error:
         # Re-render with what they typed, so a failed send doesn't lose a long message.
-        return await render_portal(request, user, error=str(error), subject=subject, body=body)
+        return await render_portal(request, user, error=str(error), topic=topic, subject=subject, body=body)
     # Redirect after POST: a browser refresh then reloads the page instead of resending the form.
     return RedirectResponse(f"/portal?sent={ticket['id']}", status_code=303)
+
+
+async def render_ticket(request: Request, user: dict, ticket_id: int, **context):
+    ticket = await api.get_ticket(user["token"], ticket_id)
+    context |= {"user": user, "ticket": ticket}
+    return templates.TemplateResponse(request, "portal_ticket.html", context)
+
+
+@app.get("/portal/tickets/{ticket_id}")
+async def portal_ticket(request: Request, user: User, ticket_id: int):
+    return await render_ticket(request, user, ticket_id)
+
+
+@app.post("/portal/tickets/{ticket_id}/messages")
+async def portal_reply(request: Request, user: User, ticket_id: int, body: Annotated[str, Form()]):
+    try:
+        await api.add_message(user["token"], ticket_id, body)
+    except api.ApiError as error:
+        return await render_ticket(request, user, ticket_id, error=str(error), body=body)
+    return RedirectResponse(f"/portal/tickets/{ticket_id}", status_code=303)
 
 
 # --- agent inbox ---
@@ -216,3 +243,70 @@ async def inbox_list(request: Request, user: User, view: str = "review", q: str 
     agent_only(user)
     context = {"tickets": await load_tickets(user, view, q), "view": view}
     return templates.TemplateResponse(request, "_ticket_list.html", context)
+
+
+# --- agent workspace (right pane) ---
+
+templates.env.filters["score"] = lambda value: "–" if value is None else f"{value:.2f}"
+
+
+async def render_workspace(request: Request, user: dict, ticket_id: int, **context):
+    agent_only(user)
+    try:
+        context |= await api.review_detail(user["token"], ticket_id)
+    except api.ApiError as error:
+        if error.status_code != 404:
+            raise
+        # No triage run saved yet (still new, or failed before the end): no AI panel.
+        context |= {"ticket": await api.get_ticket(user["token"], ticket_id), "run": None}
+    return templates.TemplateResponse(request, "_workspace.html", context)
+
+
+async def after_action(request: Request, user: dict, ticket_id: int, call):
+    """Run one API action, then re-render the pane: with the error, or with the new state."""
+    try:
+        await call
+    except api.ApiError as error:
+        return await render_workspace(request, user, ticket_id, error=str(error))
+    response = await render_workspace(request, user, ticket_id)
+    # The ticket probably moved to another view; this event makes the list refresh now.
+    response.headers["HX-Trigger"] = "ticketsChanged"
+    return response
+
+
+@app.get("/inbox/tickets/{ticket_id}")
+async def workspace(request: Request, user: User, ticket_id: int):
+    return await render_workspace(request, user, ticket_id)
+
+
+def same_text(a: str, b: str) -> bool:
+    # Browsers send textarea line breaks as \r\n, so compare without that difference.
+    return a.replace("\r\n", "\n").strip() == b.replace("\r\n", "\n").strip()
+
+
+@app.post("/inbox/tickets/{ticket_id}/decision")
+async def decision(
+    request: Request,
+    user: User,
+    ticket_id: int,
+    action: Annotated[str, Form()],
+    reply: Annotated[str, Form()] = "",
+    draft: Annotated[str, Form()] = "",
+    note: Annotated[str, Form()] = "",
+):
+    # One "Send reply" button for the agent; the API wants to know whether the draft was changed.
+    if action == "approve" and not same_text(reply, draft):
+        action = "edit"
+    edited_reply = reply if action == "edit" else None
+    call = api.decide(user["token"], ticket_id, action, edited_reply, note or None)
+    return await after_action(request, user, ticket_id, call)
+
+
+@app.post("/inbox/tickets/{ticket_id}/retriage")
+async def retriage(request: Request, user: User, ticket_id: int):
+    return await after_action(request, user, ticket_id, api.retriage(user["token"], ticket_id))
+
+
+@app.post("/inbox/tickets/{ticket_id}/reply")
+async def agent_reply(request: Request, user: User, ticket_id: int, body: Annotated[str, Form()]):
+    return await after_action(request, user, ticket_id, api.add_message(user["token"], ticket_id, body))

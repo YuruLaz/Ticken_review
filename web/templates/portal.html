@@ -14,7 +14,33 @@
   {% if error %}<p class="alert error">{{ error }}</p>{% endif %}
   {# maxlength mirrors the API limits, so the browser stops the typing instead of the API rejecting it. #}
   <form method="post" action="/portal/tickets" class="stack">
-    <label>Subject <input name="subject" maxlength="200" value="{{ subject or '' }}" required></label>
+    {# One Subject field: a topic dropdown that turns into a text box when "Other" is chosen.
+       The hidden dropdown still sends topic=other, so the server knows to use the typed subject.
+       A disabled input isn't sent with the form and skips its "required" check. #}
+    {% set custom = topic == 'other' %}
+    <label>Subject
+      <select name="topic" required onchange="if (this.value === 'other') customSubject(true)" {{ 'hidden' if custom }}>
+        {# Placeholder only: hidden from the list and can't be picked, so "required" forces a real choice. #}
+        <option value="" disabled hidden {{ 'selected' if not topic }}>Choose a topic…</option>
+        {% for option in topics %}
+          <option {{ 'selected' if topic == option }}>{{ option }}</option>
+        {% endfor %}
+        <option value="other" {{ 'selected' if custom }}>Other…</option>
+      </select>
+      <input name="subject" maxlength="200" value="{{ subject or '' }}" placeholder="Type your subject"
+             required {{ '' if custom else 'hidden disabled' }}>
+    </label>
+    <button type="button" class="link small" id="back-to-topics" onclick="customSubject(false)"
+            {{ '' if custom else 'hidden' }}>← Choose a topic instead</button>
+    <script>
+      function customSubject(on) {
+        const form = document.querySelector("form[action='/portal/tickets']");
+        form.topic.hidden = on;
+        form.subject.hidden = form.subject.disabled = !on;
+        document.getElementById("back-to-topics").hidden = !on;
+        if (on) form.subject.focus(); else form.topic.value = "";
+      }
+    </script>
     <label>What happened?
       <textarea name="body" rows="6" maxlength="5000" required>{{ body or '' }}</textarea>
     </label>
@@ -27,7 +53,7 @@
   <div class="row">
     <div class="row-main">
       <div class="row-top">
-        <strong>#{{ ticket.id }} {{ ticket.subject }}</strong>
+        <strong><a href="/portal/tickets/{{ ticket.id }}">#{{ ticket.id }} {{ ticket.subject }}</a></strong>
         {% set label = ticket.status | customer_status %}
         <span class="chip {{ 'answered' if label == 'Answered' }}">{{ label }}</span>
       </div>

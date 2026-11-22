@@ -70,3 +70,24 @@ async def ticket_counts(token: str) -> dict[str, int]:
 
 async def review_queue(token: str) -> list[dict]:
     return await request("GET", "/review/queue", token)
+
+
+async def get_ticket(token: str, ticket_id: int) -> dict:
+    return await request("GET", f"/tickets/{ticket_id}", token)
+
+
+async def add_message(token: str, ticket_id: int, body: str) -> dict:
+    return await request("POST", f"/tickets/{ticket_id}/messages", token, json={"body": body})
+
+
+async def review_detail(token: str, ticket_id: int) -> dict:
+    return await request("GET", f"/review/{ticket_id}", token)
+
+
+async def decide(token: str, ticket_id: int, action: str, edited_reply: str | None, note: str | None) -> dict:
+    payload = {"action": action, "edited_reply": edited_reply, "note": note}
+    return await request("POST", f"/review/{ticket_id}/decision", token, json=payload)
+
+
+async def retriage(token: str, ticket_id: int) -> dict:
+    return await request("POST", f"/review/{ticket_id}/retriage", token)

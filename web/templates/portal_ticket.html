@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}#{{ ticket.id }} · SupportDesk{% endblock %}
+
+{% block content %}
+<p><a href="/portal">← My requests</a></p>
+{% set label = ticket.status | customer_status %}
+<h1>#{{ ticket.id }} {{ ticket.subject }}
+  <span class="chip {{ 'answered' if label == 'Answered' }}">{{ label }}</span>
+</h1>
+
+{% set names = {"customer": "You", "ai": "ShopNest Support · AI assistant", "agent": "ShopNest Support"} %}
+{% include "_conversation.html" %}
+
+<form method="post" action="/portal/tickets/{{ ticket.id }}/messages" class="stack card">
+  {% if error %}<p class="alert error">{{ error }}</p>{% endif %}
+  <label>Reply <textarea name="body" rows="4" maxlength="5000" required>{{ body or '' }}</textarea></label>
+  <button class="primary">Send</button>
+</form>
+{% endblock %}

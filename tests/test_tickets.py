@@ -70,3 +70,9 @@ async def test_counts_per_status(client, setup):
 
     assert agent == {"awaiting_review": 2, "replied": 1}
     assert customer == {"awaiting_review": 1, "replied": 1}
+
+
+async def test_customer_follow_up_reopens_answered_ticket(client, setup):
+    ticket = (await client.get("/tickets", params={"status": "replied"}, headers=setup["customer"])).json()[0]
+    await client.post(f"/tickets/{ticket['id']}/messages", json={"body": "Still waiting"}, headers=setup["customer"])
+    assert await subjects(client, setup["agent"], status="escalated") == ["Where is my order"]

@@ -125,6 +125,9 @@ async def add_message(
     ticket = await get_visible_ticket(session, ticket_id, user)
     if user.role == "customer":
         sender_type = "customer"
+        # A follow-up on an answered ticket needs a person; without this it stays in "Answered".
+        if ticket.status == "replied":
+            ticket.status = "escalated"
     else:
         # The graph is paused on this ticket; replying here would leave it paused forever.
         if ticket.status == "awaiting_review":

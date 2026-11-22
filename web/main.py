@@ -8,9 +8,10 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from markupsafe import escape
 
 from web import api
 
@@ -33,6 +34,20 @@ async def to_login(request: Request, exc: LoginRequired):
     if request.headers.get("HX-Request"):
         return Response(headers={"HX-Redirect": "/login"})
     return RedirectResponse("/login", status_code=303)
+
+
+@app.exception_handler(api.ApiError)
+async def api_error(request: Request, error: api.ApiError):
+    """Any API error a route doesn't handle itself: a readable message instead of a 500 page."""
+    if error.status_code == 401:
+        return await to_login(request, LoginRequired())
+    if request.headers.get("HX-Request"):
+        # htmx doesn't swap error responses by default, so this is a 200 with the message,
+        # shown in whatever part of the page the request was updating.
+        return HTMLResponse(f'<p class="alert error">{escape(str(error))}</p>')
+    return templates.TemplateResponse(
+        request, "error.html", {"error": str(error)}, status_code=error.status_code
+    )
 
 
 async def get_user(request: Request) -> dict:
@@ -207,17 +222,12 @@ def agent_only(user: dict):
 
 
 async def load_tickets(user: dict, view: str, q: str) -> list[dict]:
-    try:
-        if view == "review":
-            # The review queue is already sorted the way agents work: urgent first, then oldest.
-            tickets = await api.review_queue(user["token"])
-            q = q.lower()
-            return [t for t in tickets if q in t["subject"].lower() or q in t["body"].lower()]
-        return await api.list_tickets(user["token"], status=VIEW_STATUS.get(view), search=q)
-    except api.ApiError as error:
-        if error.status_code == 401:
-            raise LoginRequired
-        raise
+    if view == "review":
+        # The review queue is already sorted the way agents work: urgent first, then oldest.
+        tickets = await api.review_queue(user["token"])
+        q = q.lower()
+        return [t for t in tickets if q in t["subject"].lower() or q in t["body"].lower()]
+    return await api.list_tickets(user["token"], status=VIEW_STATUS.get(view), search=q)
 
 
 @app.get("/inbox")

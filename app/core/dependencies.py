@@ -9,7 +9,7 @@ from app.core.security import decode_access_token
 from app.database.db import get_session
 from app.models import User
 
-# tokenUrl only tells Swagger where its "Authorize" button should log in.
+# tokenUrl only for Swagger's Authorize button.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -30,7 +30,7 @@ async def get_current_user(
         raise credentials_error
 
     user = await session.get(User, user_id)
-    # A valid token for a deleted or deactivated user must not work.
+    # Reject tokens of deactivated users.
     if user is None or not user.is_active:
         raise credentials_error
     return user

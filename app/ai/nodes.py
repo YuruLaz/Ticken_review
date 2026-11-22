@@ -1,4 +1,8 @@
+import re
+
+from langchain_core.exceptions import OutputParserException
 from langgraph.types import interrupt
+from pydantic import ValidationError
 
 from app.ai.llm import get_llm
 from app.ai.pii import mask_pii
@@ -9,17 +13,25 @@ from app.ai.schemas import DraftReply, TicketClassification
 from app.ai.state import TicketState
 from app.database.db import SessionLocal
 
-# Each node returns only the fields it changed; LangGraph merges them into the state.
+# Nodes return only their changed fields.
+
+# Retry once on schema-invalid output.
+RETRY_BAD_OUTPUT = {"retry_if_exception_type": (OutputParserException, ValidationError), "stop_after_attempt": 2}
 
 
-# First node, so Gemini, the checkpoints and traces never see raw card or phone numbers.
-# The tickets table keeps the original text for agents.
+# Mask PII before LLM, checkpoints, traces.
 def sanitize_input(state: TicketState) -> dict:
-    return {"subject": mask_pii(state["subject"]), "body": mask_pii(state["body"])}
+    return {"subject": clean(state["subject"]), "body": clean(state["body"])}
+
+
+def clean(text: str) -> str:
+    # Stop customers closing the <ticket> block.
+    text = re.sub(r"</?ticket>", "", text, flags=re.IGNORECASE)
+    return mask_pii(text)
 
 
 def classify(state: TicketState) -> dict:
-    result = get_llm().with_structured_output(TicketClassification).invoke(classify_prompt(state))
+    result = get_llm().with_structured_output(TicketClassification).with_retry(**RETRY_BAD_OUTPUT).invoke(classify_prompt(state))
     return {
         "category": result.category,
         "priority": result.priority,
@@ -34,7 +46,7 @@ def mark_spam(state: TicketState) -> dict:
     return {"route": "spam"}
 
 
-# async because the database is; LangGraph awaits it, and the graph must then be run with ainvoke.
+# Async DB, so run graph with ainvoke.
 async def retrieve(state: TicketState) -> dict:
     async with SessionLocal() as session:
         articles = await search_kb(session, f"{state['subject']}\n{state['body']}")
@@ -43,7 +55,7 @@ async def retrieve(state: TicketState) -> dict:
 
 
 def draft(state: TicketState) -> dict:
-    result = get_llm().with_structured_output(DraftReply).invoke(draft_prompt(state))
+    result = get_llm().with_structured_output(DraftReply).with_retry(**RETRY_BAD_OUTPUT).invoke(draft_prompt(state))
     return {
         "draft_reply": result.reply,
         "draft_confidence": result.confidence,
@@ -82,8 +94,7 @@ def send_reply(state: TicketState) -> dict:
 
 
 def human_review(state: TicketState) -> dict:
-    # interrupt() pauses the graph here and hands this dict to whoever runs it (later: the API).
-    # On resume, this node starts over and interrupt() returns the agent's decision instead.
+    # Pauses here; resume returns agent's decision.
     decision = interrupt({"draft_reply": state["draft_reply"], "reasons": state["route_reasons"]})
 
     if decision["action"] == "approve":

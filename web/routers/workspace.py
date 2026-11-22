@@ -19,7 +19,7 @@ async def render_workspace(request: Request, user: dict, ticket_id: int, **conte
     except api.ApiError as error:
         if error.status_code != 404:
             raise
-        # No triage run saved yet (still new, or failed before the end): no AI panel.
+        # Not triaged yet: no AI panel.
         context |= {"ticket": await api.get_ticket(user["token"], ticket_id), "run": None}
     return templates.TemplateResponse(request, "_workspace.html", context)
 
@@ -31,7 +31,7 @@ async def after_action(request: Request, user: dict, ticket_id: int, call):
     except api.ApiError as error:
         return await render_workspace(request, user, ticket_id, error=str(error))
     response = await render_workspace(request, user, ticket_id)
-    # The ticket probably moved to another view; this event makes the list refresh now.
+    # Tell the list to refresh.
     response.headers["HX-Trigger"] = "ticketsChanged"
     return response
 
@@ -42,7 +42,7 @@ async def workspace(request: Request, user: User, ticket_id: int):
 
 
 def same_text(a: str, b: str) -> bool:
-    # Browsers send textarea line breaks as \r\n, so compare without that difference.
+    # Ignore \r\n vs \n differences.
     return a.replace("\r\n", "\n").strip() == b.replace("\r\n", "\n").strip()
 
 
@@ -56,7 +56,7 @@ async def decision(
     draft: Annotated[str, Form()] = "",
     note: Annotated[str, Form()] = "",
 ):
-    # One "Send reply" button for the agent; the API wants to know whether the draft was changed.
+    # Unchanged draft is approve, else edit.
     if action == "approve" and not same_text(reply, draft):
         action = "edit"
     edited_reply = reply if action == "edit" else None

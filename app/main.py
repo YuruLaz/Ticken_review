@@ -14,11 +14,10 @@ from app.routers import analytics, auth, review, tickets
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_tracing()
-    # The checkpointer uses psycopg, not asyncpg, so it needs the plain postgresql:// URL.
+    # psycopg needs the plain postgresql:// URL.
     conn_string = settings.database_url.replace("+asyncpg", "")
-    # A pool, not one shared connection: concurrent tickets save checkpoints in parallel, and
-    # broken connections get replaced. The kwargs are what the checkpointer requires per connection.
-    # open=False: the pool is opened by async with, not in the constructor (which can't await).
+    # Pool: parallel checkpoints, replaces broken connections.
+    # open=False: opened by async with.
     async with AsyncConnectionPool(
         conn_string,
         kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},

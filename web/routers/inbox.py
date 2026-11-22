@@ -9,7 +9,7 @@ from web.templating import templates
 
 router = APIRouter(prefix="/inbox")
 
-# (name in the URL, label, ticket status it shows). The first three need an agent's action.
+# (url name, label, status); first three need action.
 VIEWS = [
     ("review", "Needs review", "awaiting_review"),
     ("failed", "Failed", "failed"),
@@ -24,7 +24,7 @@ VIEW_STATUS = {name: status for name, _, status in VIEWS}
 
 async def load_tickets(user: dict, view: str, q: str) -> list[dict]:
     if view == "review":
-        # The review queue is already sorted the way agents work: urgent first, then oldest.
+        # Queue already sorted: urgent, then oldest.
         tickets = await api.review_queue(user["token"])
         q = q.lower()
         return [t for t in tickets if q in t["subject"].lower() or q in t["body"].lower()]

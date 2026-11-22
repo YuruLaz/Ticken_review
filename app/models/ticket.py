@@ -8,8 +8,7 @@ from app.database.base import Base
 
 class Ticket(Base):
     __tablename__ = "tickets"
-    # Fetch updated_at (set by the database on UPDATE) in the same statement; otherwise reading
-    # it after a commit triggers a lazy reload, which fails in async code (MissingGreenlet).
+    # Fetch updated_at eagerly; avoids MissingGreenlet.
     __mapper_args__ = {"eager_defaults": True}
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -18,7 +17,7 @@ class Ticket(Base):
     body: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(30), default="new", index=True)
 
-    # Empty until the AI classifies the ticket, hence nullable.
+    # Null until the AI classifies.
     category: Mapped[str | None] = mapped_column(String(30))
     priority: Mapped[str | None] = mapped_column(String(20))
     sentiment: Mapped[str | None] = mapped_column(String(20))
@@ -42,7 +41,7 @@ class TicketMessage(Base):
     ticket_id: Mapped[int] = mapped_column(
         ForeignKey("tickets.id", ondelete="CASCADE"), index=True
     )
-    # customer | ai | agent. Stored separately from author_id because AI messages have no user.
+    # customer | ai | agent; AI has no author.
     sender_type: Mapped[str] = mapped_column(String(20))
     author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     body: Mapped[str] = mapped_column(Text)

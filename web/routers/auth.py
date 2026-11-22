@@ -27,9 +27,7 @@ async def login(request: Request, email: Annotated[str, Form()], password: Annot
     except api.ApiError as error:
         return templates.TemplateResponse(request, "login.html", {"error": str(error), "email": email})
     response = RedirectResponse("/", status_code=303)
-    # httponly: page JavaScript can't read the token, so an injected script can't steal it.
-    # samesite=lax: the browser doesn't send it on cross-site form posts (basic CSRF protection).
-    # secure=True would be required on HTTPS; it's off because local dev runs on plain HTTP.
+    # httponly blocks XSS theft; samesite limits CSRF.
     response.set_cookie(TOKEN_COOKIE, token, httponly=True, samesite="lax")
     return response
 

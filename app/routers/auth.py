@@ -19,7 +19,7 @@ async def register(data: UserCreate, session: SessionDep):
             status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
         )
 
-    # role is never taken from the request, so nobody can register as admin.
+    # Role never from request: no self-admin.
     user = User(
         email=data.email,
         full_name=data.full_name,

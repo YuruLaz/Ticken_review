@@ -4,12 +4,11 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
 
-# Must match the size the embedding model is asked to return.
+# Must match embedding model output size.
 EMBEDDING_DIM = 768
 
 
-# shortcut: one embedding per whole article, no chunking; fine while articles are a few
-# paragraphs, split into chunks if long articles start retrieving poorly.
+# shortcut: whole-article embeddings; chunk if retrieval degrades.
 class KBArticle(Base):
     __tablename__ = "kb_articles"
 

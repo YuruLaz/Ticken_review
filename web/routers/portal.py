@@ -11,13 +11,13 @@ from web.templating import templates
 
 router = APIRouter(prefix="/portal")
 
-# Shown as the subject choices. Only a hint: the AI still classifies every ticket itself.
+# Subject choices; AI still classifies.
 TOPICS = ["Billing or payment", "Order and shipping", "Account and login", "Technical problem", "General question"]
 
 
 async def render_portal(request: Request, user: dict, **context):
     tickets = await api.list_tickets(user["token"])
-    # Spam is hidden rather than labelled: telling a sender "marked as spam" helps nobody.
+    # Hide spam from customers.
     tickets = [t for t in tickets if t["status"] != "spam"]
     context |= {"user": user, "tickets": tickets, "topics": TOPICS}
     return templates.TemplateResponse(request, "portal.html", context)
@@ -36,16 +36,16 @@ async def create_ticket(
     user: User,
     topic: Annotated[str, Form()],
     body: Annotated[str, Form()],
-    subject: Annotated[str | None, Form()] = None,  # only sent when the topic is "other"
+    subject: Annotated[str | None, Form()] = None,  # only for topic "other"
 ):
     if topic != "other":
         subject = topic
     try:
         ticket = await api.create_ticket(user["token"], subject, body)
     except api.ApiError as error:
-        # Re-render with what they typed, so a failed send doesn't lose a long message.
+        # Keep typed text on failure.
         return await render_portal(request, user, error=str(error), topic=topic, subject=subject, body=body)
-    # Redirect after POST: a browser refresh then reloads the page instead of resending the form.
+    # Post/Redirect/Get: refresh won't resend.
     return RedirectResponse(f"/portal?sent={ticket['id']}", status_code=303)
 
 

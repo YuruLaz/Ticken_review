@@ -1,17 +1,16 @@
 from dataclasses import dataclass
 
-# Measured on the seeded KB with gemini-embedding-001: covered questions 0.64-0.73, uncovered 0.58-0.62.
+# Measured: covered 0.64-0.73, uncovered 0.58-0.62.
 MIN_KB_SCORE = 0.65
 
-# Starting guesses, not measured values: conservative so that doubtful tickets go to a human.
+# Unmeasured guesses, kept deliberately conservative.
 MIN_CLASSIFICATION_CONFIDENCE = 0.75
 MIN_DRAFT_CONFIDENCE = 0.80
 
-# Money: a wrong auto-reply here is costly, however confident the model is. Stricter than the
-# spec, which would auto-send purely informational billing replies; this needs no refund-promise check.
+# Money mistakes are costly: always human.
 ALWAYS_REVIEW_CATEGORIES = {"billing"}
 
-# Only low and medium priority tickets may be answered without a human (spec 4.4).
+# Only low/medium may auto-send (spec 4.4).
 HUMAN_PRIORITIES = {"high", "urgent"}
 
 
@@ -30,7 +29,7 @@ def route(
     best_kb_score: float,
     quality_issues: list[str],
 ) -> RouteDecision:
-    # Collect every reason instead of stopping at the first one, so the agent sees the full picture.
+    # Collect all reasons for the agent.
     reasons = []
 
     if priority in HUMAN_PRIORITIES:
@@ -40,12 +39,12 @@ def route(
     if category in ALWAYS_REVIEW_CATEGORIES:
         reasons.append(f"{category} tickets are always reviewed")
 
-    # Measured similarity: a low score means the draft has no KB article to rely on.
+    # Low score: no supporting KB article.
     if best_kb_score < MIN_KB_SCORE:
         reasons.append("no matching KB article")
     reasons.extend(f"quality issue: {issue}" for issue in quality_issues)
 
-    # Self-reported by the LLM, so it's the least trusted signal and only a final filter.
+    # Self-reported by LLM, least trusted.
     if classification_confidence < MIN_CLASSIFICATION_CONFIDENCE:
         reasons.append("low classification confidence")
     if draft_confidence < MIN_DRAFT_CONFIDENCE:

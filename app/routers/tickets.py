@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
@@ -21,15 +22,18 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 Customer = Annotated[User, Depends(require_role("customer"))]
 
+# Limits LLM cost per customer.
+MAX_TICKETS_PER_HOUR = 10
+
 
 async def get_visible_ticket(session: SessionDep, ticket_id: int, user: User) -> Ticket:
-    # Messages are loaded up front: in async code a lazy load on ticket.messages fails.
+    # Eager-load messages; async lazy loads fail.
     ticket = await session.scalar(
         select(Ticket)
         .options(selectinload(Ticket.messages))
         .where(Ticket.id == ticket_id)
     )
-    # 404 rather than 403 for someone else's ticket, so customers can't probe which ids exist.
+    # 404 not 403: hides which IDs exist.
     if ticket is None or (user.role == "customer" and ticket.customer_id != user.id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found"
@@ -45,10 +49,21 @@ async def create_ticket(
     request: Request,
     background_tasks: BackgroundTasks,
 ):
+    # DB count: survives restarts, uses DB clock.
+    recent = await session.scalar(
+        select(func.count())
+        .where(Ticket.customer_id == user.id)
+        .where(Ticket.created_at > func.now() - timedelta(hours=1))
+    )
+    if recent >= MAX_TICKETS_PER_HOUR:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests in the last hour. Please try again later.",
+        )
     ticket = Ticket(customer_id=user.id, subject=data.subject, body=data.body)
     session.add(ticket)
     await session.commit()
-    # Runs after the response is sent: the customer gets their ticket id now, not after the LLM calls.
+    # Runs after response; customer doesn't wait.
     graph_input = {"ticket_id": ticket.id, "subject": ticket.subject, "body": ticket.body}
     background_tasks.add_task(run_triage, request.app.state.graph, ticket.id, graph_input)
     return ticket
@@ -62,8 +77,7 @@ def visible_tickets(user: User):
     return query
 
 
-# Both roles share these routes, so the schema is picked per request; the union in
-# response_model lets FastAPI serialize whichever one was returned.
+# Schema chosen per role; union serializes either.
 @router.get("", response_model=list[AgentTicketRead] | list[TicketRead])
 async def list_tickets(
     user: CurrentUser,
@@ -81,8 +95,7 @@ async def list_tickets(
         query = query.where(Ticket.status == status)
     if category:
         query = query.where(Ticket.category == category)
-    # Customers can't see these fields, so they can't filter on them either: a filter would
-    # reveal them indirectly (e.g. which of my tickets were labelled "angry").
+    # Hidden fields aren't filterable for customers.
     if user.role != "customer":
         if priority:
             query = query.where(Ticket.priority == priority)
@@ -96,7 +109,7 @@ async def list_tickets(
     return [schema.model_validate(ticket) for ticket in await session.scalars(query)]
 
 
-# Declared before /{ticket_id}, otherwise "counts" would be matched as a ticket id.
+# Before /{ticket_id}, or "counts" matches it.
 @router.get("/counts")
 async def ticket_counts(user: CurrentUser, session: SessionDep) -> dict[str, int]:
     """Number of visible tickets per status, for the inbox's views."""
@@ -125,11 +138,11 @@ async def add_message(
     ticket = await get_visible_ticket(session, ticket_id, user)
     if user.role == "customer":
         sender_type = "customer"
-        # A follow-up on an answered ticket needs a person; without this it stays in "Answered".
+        # Follow-up on answered ticket needs a person.
         if ticket.status == "replied":
             ticket.status = "escalated"
     else:
-        # The graph is paused on this ticket; replying here would leave it paused forever.
+        # Paused graph: use the decision endpoint.
         if ticket.status == "awaiting_review":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

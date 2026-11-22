@@ -8,14 +8,14 @@ async def register(client, **overrides):
 
 
 async def login(client, password=PASSWORD):
-    # /auth/login takes form data, not JSON, because it follows the OAuth2 spec.
+    # OAuth2 login takes form data.
     return await client.post(
         "/auth/login", data={"username": EMAIL, "password": password}
     )
 
 
 async def test_register_creates_customer(client):
-    # Sending a role must not let anyone pick their own.
+    # Users can't choose their role.
     response = await register(client, role="admin")
 
     assert response.status_code == 201

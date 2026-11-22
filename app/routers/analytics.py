@@ -32,8 +32,7 @@ async def overview(user: Admin, session: SessionDep):
 
 @router.get("/automation-rate")
 async def automation_rate(user: Admin, session: SessionDep):
-    # Counted per triage run, which is one per ticket (a failed run saves nothing, and a re-run
-    # continues it). Spam is left out of the rate: it gets no reply either way.
+    # One run per ticket; spam excluded.
     routes = await count_by(session, TriageRun.route)
     auto, human = routes.get("auto_send", 0), routes.get("human_review", 0)
     return {"routes": routes, "automation_rate": rate(auto, auto + human)}
@@ -46,8 +45,7 @@ async def ai_accuracy(user: Admin, session: SessionDep):
         select(
             TriageRun.human_decision,
             func.count(),
-            # The AI's own confidence per outcome: if rejected drafts score as high as approved
-            # ones, the confidence isn't telling us much (input for tuning the thresholds).
+            # Compare confidence across outcomes for tuning.
             func.avg(TriageRun.draft_confidence),
         )
         .where(TriageRun.human_decision.is_not(None))

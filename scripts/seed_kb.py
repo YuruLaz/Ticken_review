@@ -18,11 +18,11 @@ async def main():
         title, content = path.read_text().split("\n", 1)
         articles.append((title.removeprefix("# "), content.strip()))
 
-    # One API call for all articles instead of one per article.
+    # Embed all articles in one call.
     vectors = await get_embeddings().aembed_documents([f"{t}\n{c}" for t, c in articles])
 
     async with SessionLocal() as session:
-        # Re-running replaces the KB instead of adding duplicates.
+        # Replace, don't duplicate, on re-run.
         await session.execute(delete(KBArticle))
         session.add_all(
             KBArticle(title=title, content=content, embedding=vector)

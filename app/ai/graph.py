@@ -3,7 +3,7 @@ from langgraph.graph import END, START, StateGraph
 from app.ai import nodes
 from app.ai.state import TicketState
 
-# Limits the draft -> quality_check loop, so a model that keeps failing can't loop forever.
+# Caps the draft/quality-check retry loop.
 MAX_ATTEMPTS = 2
 
 
@@ -21,8 +21,7 @@ def after_decide_route(state: TicketState) -> str:
     return "send_reply" if state["route"] == "auto_send" else "human_review"
 
 
-# The checkpointer saves the state after every node, which is what lets a paused ticket
-# be resumed later. Tests pass an in-memory one, the app a Postgres one.
+# Saves state per node; enables resume.
 def build_graph(checkpointer=None):
     graph = StateGraph(TicketState)
 

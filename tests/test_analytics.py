@@ -11,7 +11,7 @@ async def admin(client, session_maker):
     async with session_maker() as session:
         user = await session.scalar(select(User).where(User.email == "admin@example.com"))
         user.role = "admin"
-        # Four triaged tickets: two auto-sent, two reviewed (approved and rejected), plus one spam.
+        # Two auto-sent, two reviewed, one spam.
         runs = [
             ("billing", "high", "auto_send", None, 0.9),
             ("billing", "low", "auto_send", None, 0.9),

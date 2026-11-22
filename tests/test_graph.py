@@ -7,7 +7,7 @@ from app.ai.graph import build_graph
 from app.ai.schemas import DraftReply, TicketClassification
 
 TICKET = {"ticket_id": 1, "subject": "Where is my order?", "body": "Order 123 is late."}
-# One ticket = one thread: the checkpointer stores and resumes state per thread_id.
+# Checkpointer keys state by thread_id.
 CONFIG = {"configurable": {"thread_id": "ticket-1"}}
 
 
@@ -31,7 +31,7 @@ def fake_retrieve(articles):
     return retrieve
 
 
-# Keeps every graph test away from the real database and embedding API; "nothing found" by default.
+# No real DB or embeddings; finds nothing.
 @pytest.fixture(autouse=True)
 def empty_kb(monkeypatch):
     monkeypatch.setattr(nodes, "retrieve", fake_retrieve([]))
@@ -56,7 +56,7 @@ async def test_failed_quality_check_retries_once_then_stops(fake_llm):
 
 
 async def test_confident_ticket_is_auto_sent(fake_llm, monkeypatch):
-    # Pretend RAG found a good article, so nothing sends the ticket to a human.
+    # Pretend RAG found a good article.
     monkeypatch.setattr(nodes, "retrieve", fake_retrieve([{"id": 1, "score": 0.9}]))
     fake_llm.answers = [classification(), reply(cited=[1])]
 
@@ -73,7 +73,7 @@ async def test_human_review_pauses_the_graph(fake_llm):
 
     assert result["route"] == "human_review"
     assert "final_reply" not in result
-    # What interrupt() handed out: the draft the agent will see.
+    # Draft handed out by interrupt().
     assert result["__interrupt__"][0].value["draft_reply"] == "Your order ships tomorrow."
 
 
@@ -86,7 +86,7 @@ async def test_agent_edit_resumes_the_graph(fake_llm):
 
     assert result["review_action"] == "edit"
     assert result["final_reply"] == "Edited by agent."
-    # The LLM was not called again: the graph continued from the saved state.
+    # Resumed from state; LLM not recalled.
     assert len(fake_llm.prompts) == 2
 
 
@@ -102,17 +102,17 @@ async def test_agent_reject_sends_nothing(fake_llm):
 
 
 async def test_failed_run_continues_from_last_checkpoint(fake_llm):
-    fake_llm.answers = [classification()]  # no draft answer queued, so draft fails (like a Gemini error)
+    fake_llm.answers = [classification()]  # no draft answer, so draft fails
     graph = new_graph()
     with pytest.raises(IndexError):
         await graph.ainvoke(TICKET, CONFIG)
 
     fake_llm.answers = [reply()]
-    # None = no new input: continue the thread from its last saved step, which re-runs draft.
+    # None: continue thread, re-running draft.
     result = await graph.ainvoke(None, CONFIG)
 
     assert result["route"] == "human_review"
-    # classify was not called again: one prompt for it, one per draft attempt.
+    # classify not repeated after resume.
     assert len(fake_llm.prompts) == 3
 
 

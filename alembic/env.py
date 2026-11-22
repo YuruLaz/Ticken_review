@@ -7,31 +7,23 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-import app.models  # noqa: F401  registers every model on Base.metadata
+import app.models  # noqa: F401  registers all models
 from app.core.config import settings
 from app.database.base import Base
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# Alembic Config, values from alembic.ini.
 config = context.config
-# Read the URL from .env so the database address lives in one place.
+# Database URL comes from .env.
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# Set up logging from config.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
+# Model metadata, used by autogenerate.
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+# Other values: config.get_main_option().
 
 
 def run_migrations_offline() -> None:
@@ -59,8 +51,7 @@ def run_migrations_offline() -> None:
 
 
 def include_object(object, name, type_, reflected, compare_to):
-    # LangGraph's checkpointer owns its tables (checkpoints, checkpoint_writes, ...);
-    # without this, autogenerate sees them as unknown and writes drop_table for them.
+    # Checkpointer tables aren't Alembic's; skip them.
     return not (type_ == "table" and name.startswith("checkpoint"))
 
 

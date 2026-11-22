@@ -14,19 +14,19 @@ def graph_config(
     ticket_id: int, run_name: str, category: str | None = None, run_id: uuid.UUID | None = None
 ) -> dict:
     metadata = {"ticket_id": ticket_id, "environment": settings.environment}
-    # Unknown on the first run: classify sets it inside that run.
+    # Unknown until classify runs.
     if category:
         metadata["category"] = category
     config = {
-        # One ticket = one graph thread, so a paused ticket can be resumed later by its id.
+        # One ticket, one resumable thread.
         "configurable": {"thread_id": str(ticket_id)},
-        # The rest only labels the LangSmith trace, so runs can be found and filtered.
+        # Labels the trace in LangSmith.
         "run_name": run_name,
         "tags": [run_name, settings.environment],
         "metadata": metadata,
     }
     if run_id:
-        # Becomes the trace's ID in LangSmith, so we know it without asking LangSmith.
+        # Our own LangSmith trace ID.
         config["run_id"] = run_id
     return config
 
@@ -37,14 +37,12 @@ async def run_triage(graph, ticket_id: int, graph_input: dict | None) -> None:
     graph_input is the new ticket's subject/body, or None to continue a failed run from its
     last checkpoint, so steps that already succeeded (and their LLM calls) aren't repeated.
     """
-    # No session is open during the graph run: LLM calls take seconds, and an open
-    # session would hold a pooled database connection the whole time.
+    # No session held during slow LLM calls.
     try:
         run_id = uuid.uuid4()
         state = await graph.ainvoke(graph_input, graph_config(ticket_id, "triage", run_id=run_id))
     except Exception:
-        # Any failure (LLM error, rate limit, timeout): nobody sees a background task's
-        # exception, so log it and mark the ticket so an agent can find and re-run it.
+        # Log it; agent can re-run failed tickets.
         logger.exception("Triage failed for ticket %s", ticket_id)
         async with SessionLocal() as session:
             ticket = await session.get(Ticket, ticket_id)
@@ -61,7 +59,7 @@ async def run_triage(graph, ticket_id: int, graph_input: dict | None) -> None:
         ticket.ai_summary = state["summary"][:200]  # the column's limit; the LLM may overshoot
         ticket.status = STATUS_BY_ROUTE[state["route"]]
 
-        # .get() for the draft fields: a spam ticket stops after classify and never sets them.
+        # Spam never sets draft fields.
         session.add(TriageRun(
             ticket_id=ticket_id,
             classification_confidence=state["classification_confidence"],

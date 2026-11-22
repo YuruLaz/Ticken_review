@@ -33,6 +33,6 @@ def home_for(user: dict) -> str:
 
 
 def agent_only(user: dict):
-    # For the htmx partials; the full /inbox page redirects customers to their portal instead.
+    # For partials; full pages redirect instead.
     if user["role"] == "customer":
         raise HTTPException(status_code=403, detail="Agents only")

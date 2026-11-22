@@ -1,7 +1,7 @@
 from typing import TypedDict
 
 
-# total=False: each node fills in only its own fields, so most keys are missing early on.
+# total=False: nodes fill fields gradually.
 class TicketState(TypedDict, total=False):
     # input
     ticket_id: int
@@ -16,7 +16,7 @@ class TicketState(TypedDict, total=False):
     summary: str
     classification_confidence: float
 
-    # retrieve (stub until RAG in step 12)
+    # retrieve
     kb_articles: list[dict]
     best_kb_score: float
 
@@ -32,5 +32,5 @@ class TicketState(TypedDict, total=False):
     route_reasons: list[str]
 
     # outcome
-    review_action: str  # approve | edit | reject (only when a human reviewed it)
-    final_reply: str  # what the customer gets; empty when rejected
+    review_action: str  # approve | edit | reject, human only
+    final_reply: str  # sent to customer; empty if rejected

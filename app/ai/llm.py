@@ -5,15 +5,16 @@ from app.core.config import settings
 from app.models.kb import EMBEDDING_DIM
 
 
-# Nodes call this instead of creating the model themselves, so tests can swap in a fake LLM.
-# No temperature: current Claude models reject sampling parameters.
+# Swappable in tests; Claude rejects temperature.
 def get_llm():
     return ChatAnthropic(
         model=settings.anthropic_model,
         api_key=settings.anthropic_api_key,
-        # The library defaults to the model's maximum (128K), which the SDK refuses for a
-        # non-streaming call; 16K is plenty for the thinking plus a classification or reply.
+        # Default 128K is refused without streaming.
         max_tokens=16000,
+        # SDK retries timeouts, 429s and 5xx.
+        max_retries=3,
+        default_request_timeout=60,
     )
 
 

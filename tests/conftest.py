@@ -1,7 +1,6 @@
 import os
 
-# Set before the app is imported (its load_dotenv() doesn't override): tests use a fake LLM
-# and must not send traces to LangSmith.
+# Before app import: no LangSmith traces.
 os.environ["LANGSMITH_TRACING"] = "false"
 
 import pytest  # noqa: E402
@@ -16,19 +15,17 @@ from app.database.base import Base
 from app.database.db import get_session
 from app.main import app
 
-# Same server as the dev database, so the only extra setup is creating this database once.
+# Test DB on the dev server.
 TEST_DATABASE_URL = make_url(settings.database_url).set(database="supportdesk_test")
 
 
 @pytest.fixture
 async def session_maker():
-    # A new engine per test: asyncpg connections belong to one event loop, and
-    # each test gets its own loop, so the app's global engine can't be reused.
+    # New engine per test's event loop.
     engine = create_async_engine(TEST_DATABASE_URL)
-    # Dropping at the start rather than the end leaves a failed test's data
-    # behind so you can inspect it.
+    # Drop first: failed test data stays inspectable.
     async with engine.begin() as conn:
-        # Alembic enables this in the dev DB; create_all doesn't, and kb_articles needs it.
+        # create_all doesn't enable pgvector.
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
@@ -42,7 +39,7 @@ async def client(session_maker):
         async with session_maker() as session:
             yield session
 
-    # Every route that depends on get_session gets the test database instead.
+    # Routes use the test database.
     app.dependency_overrides[get_session] = get_test_session
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -61,6 +58,9 @@ class FakeLLM:
     def with_structured_output(self, schema):
         return self
 
+    def with_retry(self, **kwargs):
+        return self
+
     def invoke(self, prompt):
         self.prompts.append(prompt)
         return self.answers.pop(0)
@@ -69,6 +69,6 @@ class FakeLLM:
 @pytest.fixture
 def fake_llm(monkeypatch):
     fake = FakeLLM()
-    # Patch the name nodes.py imported, not app.ai.llm.get_llm: nodes holds its own reference.
+    # Patch the name nodes.py imported.
     monkeypatch.setattr(nodes, "get_llm", lambda: fake)
     return fake

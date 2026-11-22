@@ -10,7 +10,7 @@ class UserCreate(BaseModel):
 
 
 class UserRead(BaseModel):
-    # Lets Pydantic read attributes off a SQLAlchemy object, not just a dict.
+    # Read attributes from SQLAlchemy objects.
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -22,7 +22,7 @@ class UserRead(BaseModel):
 
 
 class LoginForm(BaseModel):
-    # Field names are fixed by OAuth2 so Swagger's Authorize button works; username holds the email.
+    # OAuth2 field names; username holds email.
     username: str
     password: str
 

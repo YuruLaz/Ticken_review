@@ -15,7 +15,7 @@ router = APIRouter(prefix="/review", tags=["review"])
 
 Agent = Annotated[User, Depends(require_role("agent", "admin"))]
 
-# Sorting by the priority text would put "high" before "urgent"; this maps it to a rank.
+# Rank priorities; text sort would misorder.
 PRIORITY_RANK = case(
     {"urgent": 0, "high": 1, "medium": 2, "low": 3}, value=Ticket.priority, else_=4
 )
@@ -58,11 +58,10 @@ async def review_detail(ticket_id: int, user: Agent, session: SessionDep):
 async def decide(
     ticket_id: int, decision: Decision, user: Agent, session: SessionDep, request: Request
 ):
-    # Row lock until commit: if two agents decide at once, the second waits here, then
-    # sees the first one's new status below and gets a 409 instead of resuming twice.
+    # Row lock: concurrent decisions get 409.
     await session.execute(select(Ticket.id).where(Ticket.id == ticket_id).with_for_update())
     ticket = await get_visible_ticket(session, ticket_id, user)
-    # Also what stops a second decision: after the first, the status is replied or escalated.
+    # Also blocks a second decision.
     if ticket.status != "awaiting_review":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Ticket is not awaiting review"
@@ -73,7 +72,7 @@ async def decide(
             detail="edited_reply is required for edit",
         )
 
-    # Continues the paused graph: human_review runs again and interrupt() returns this dict.
+    # Resume paused graph with the decision.
     resume = {"action": decision.action, "reply": decision.edited_reply}
     config = graph_config(ticket_id, "review_decision", ticket.category)
     state = await request.app.state.graph.ainvoke(Command(resume=resume), config)
@@ -82,13 +81,13 @@ async def decide(
     run.human_decision = decision.action
     run.review_note = decision.note
     if state["final_reply"]:
-        # Appended to the relationship, so the returned ticket already includes it.
+        # Returned ticket includes the new message.
         ticket.messages.append(
             TicketMessage(sender_type="agent", author_id=user.id, body=state["final_reply"])
         )
         ticket.status = "replied"
     else:
-        # Rejected draft: nothing is sent, a human has to handle the ticket.
+        # Rejected: nothing sent, human handles it.
         ticket.status = "escalated"
     await session.commit()
     return ticket
@@ -102,16 +101,16 @@ async def retriage(
     request: Request,
     background_tasks: BackgroundTasks,
 ):
-    # Same row lock as in decide: two clicks at once can't both see "failed".
+    # Same lock: prevents double re-runs.
     await session.execute(select(Ticket.id).where(Ticket.id == ticket_id).with_for_update())
     ticket = await get_visible_ticket(session, ticket_id, user)
     if ticket.status != "failed":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Only failed tickets can be re-run"
         )
-    # Back to "new" right away, so a second click gets a 409 instead of starting a second run.
+    # Set "new" now so repeats get 409.
     ticket.status = "new"
     await session.commit()
-    # None: continue the failed run from its last checkpoint instead of starting over.
+    # None: resume from last checkpoint.
     background_tasks.add_task(run_triage, request.app.state.graph, ticket_id, None)
     return ticket

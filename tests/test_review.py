@@ -29,7 +29,7 @@ async def headers_for(client, email):
 @pytest.fixture
 async def setup(client, session_maker, monkeypatch):
     graph = FakeGraph()
-    # The test client skips the lifespan, so the graph has to be put in place by hand.
+    # Lifespan skipped; install graph manually.
     monkeypatch.setattr(app.state, "graph", graph, raising=False)
 
     customer = await headers_for(client, "customer@example.com")
@@ -120,7 +120,7 @@ async def test_retriage_restarts_a_failed_ticket(client, setup, session_maker, m
 
     assert response.status_code == 202
     assert response.json()["status"] == "new"
-    # None = continue from the last checkpoint, not start over.
+    # None: continue from last checkpoint.
     assert calls == [(setup["ticket_id"], None)]
 
 

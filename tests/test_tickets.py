@@ -18,7 +18,7 @@ async def setup(client, session_maker):
     other = await headers_for(client, "other@example.com")
     agent = await headers_for(client, "agent@example.com")
 
-    # Inserted directly: POST /tickets would start the real graph in the background.
+    # Direct insert avoids running the graph.
     async with session_maker() as session:
         (await session.scalar(select(User).where(User.email == "agent@example.com"))).role = "agent"
         owner = await session.scalar(select(User).where(User.email == "customer@example.com"))
@@ -54,7 +54,7 @@ async def test_filters_never_show_other_customers_tickets(client, setup):
 
 
 async def test_customer_cannot_filter_on_hidden_fields(client, setup):
-    # Ignored for customers, so it can't reveal which of their tickets were labelled angry.
+    # Hidden field filter ignored for customers.
     assert await subjects(client, setup["customer"], sentiment="angry") == ["Charged twice", "Where is my order"]
 
 
@@ -76,3 +76,13 @@ async def test_customer_follow_up_reopens_answered_ticket(client, setup):
     ticket = (await client.get("/tickets", params={"status": "replied"}, headers=setup["customer"])).json()[0]
     await client.post(f"/tickets/{ticket['id']}/messages", json={"body": "Still waiting"}, headers=setup["customer"])
     assert await subjects(client, setup["agent"], status="escalated") == ["Where is my order"]
+
+
+async def test_eleventh_ticket_in_an_hour_is_refused(client, session_maker):
+    headers = await headers_for(client, "busy@example.com")
+    async with session_maker() as session:
+        user = await session.scalar(select(User).where(User.email == "busy@example.com"))
+        session.add_all(Ticket(customer_id=user.id, subject="s", body="b") for _ in range(10))
+        await session.commit()
+    response = await client.post("/tickets", json={"subject": "s", "body": "b"}, headers=headers)
+    assert response.status_code == 429

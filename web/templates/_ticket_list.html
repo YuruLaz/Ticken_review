@@ -1,7 +1,6 @@
 {# Partial: the ticket rows only. Rendered inside inbox.html and on its own for htmx swaps. #}
 {% for ticket in tickets %}
-  <div class="row clickable" hx-get="/inbox/tickets/{{ ticket.id }}" hx-target="#workspace">
-    <span class="dot {{ ticket.priority or '' }}" title="{{ ticket.priority or 'no priority yet' }}"></span>
+  <div class="row clickable {{ ticket.priority or '' }}" hx-get="/inbox/tickets/{{ ticket.id }}" hx-target="#workspace">
     <div class="row-main">
       <div class="row-top">
         <strong>#{{ ticket.id }} {{ ticket.subject }}</strong>
@@ -9,8 +8,9 @@
       </div>
       <div class="snippet">{{ ticket.body | truncate(80) }}</div>
       <div class="small muted">
+        {% if ticket.priority %}<span class="priority {{ ticket.priority }}">{{ ticket.priority }}</span> ·{% endif %}
         {{ ticket.category or "not classified" }}
-        {% if ticket.sentiment %}· {{ ticket.sentiment | mood }} {{ ticket.sentiment }}{% endif %}
+        {% if ticket.sentiment %}· <span class="dot inline mood {{ ticket.sentiment }}"></span> {{ ticket.sentiment }}{% endif %}
         {% if view == "all" %}· <span class="chip">{{ ticket.status }}</span>{% endif %}
       </div>
     </div>

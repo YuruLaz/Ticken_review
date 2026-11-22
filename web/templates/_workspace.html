@@ -6,7 +6,7 @@
     <span class="chip">{{ ticket.status }}</span>
     <span class="dot inline {{ ticket.priority or '' }}"></span> {{ ticket.priority or "no priority" }}
     · {{ ticket.category or "not classified" }}
-    {% if ticket.sentiment %}· {{ ticket.sentiment | mood }} {{ ticket.sentiment }}{% endif %}
+    {% if ticket.sentiment %}· <span class="dot inline mood {{ ticket.sentiment }}"></span> {{ ticket.sentiment }}{% endif %}
     {% if ticket.language %}· {{ ticket.language }}{% endif %}
     · {{ ticket.created_at | age }}
   </div>

@@ -144,7 +144,7 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
 .small { font-size: .8rem; }
 .empty-list { text-align: center; margin-top: 2rem; }
 
-/* Priority dot: red urgent, orange high, grey otherwise. */
+/* Small colored circle (priority in the workspace header, sentiment everywhere). */
 .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: .45rem; flex-shrink: 0; background: var(--border); }
 .dot.urgent { background: var(--urgent); }
 .dot.high { background: var(--high); }
@@ -165,3 +165,19 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
 .ai-panel ul { margin: .25rem 0 .75rem; padding-left: 1.25rem; }
 .scores { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: .5rem; }
 .actions { display: flex; gap: .5rem; }
+
+/* Sentiment dot, same shape as the priority dot. */
+.dot.mood.angry { background: var(--urgent); }
+.dot.mood.negative { background: var(--high); }
+.dot.mood.neutral { background: #94a3b8; }
+.dot.mood.positive { background: var(--ok); }
+
+/* Priority word in the row, colored like its dot so the two read as one signal. */
+.priority { font-weight: 600; }
+.priority.urgent { color: var(--urgent); }
+.priority.high { color: var(--high); }
+
+/* Stripe on the left edge of urgent and high rows. A shadow rather than border-left, so the
+   hover border color doesn't paint over it. */
+.row.urgent { box-shadow: inset 4px 0 0 var(--urgent); }
+.row.high { box-shadow: inset 4px 0 0 var(--high); }

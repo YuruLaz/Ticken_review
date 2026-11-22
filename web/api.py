@@ -36,7 +36,7 @@ async def request(method: str, path: str, token: str | None = None, **kwargs):
         raise ApiError(503, "Can't reach the API. Is it running?")
     if response.is_error:
         raise ApiError(response.status_code, _message(response))
-    return response.json()
+    return response.json() if response.content else None  # 204 has no body
 
 
 async def login(email: str, password: str) -> str:
@@ -99,3 +99,26 @@ async def analytics(token: str) -> dict:
         "automation": await request("GET", "/analytics/automation-rate", token),
         "accuracy": await request("GET", "/analytics/ai-accuracy", token),
     }
+
+
+async def kb_articles(token: str) -> list[dict]:
+    return await request("GET", "/kb/articles", token)
+
+
+async def kb_article(token: str, article_id: int) -> dict:
+    return await request("GET", f"/kb/articles/{article_id}", token)
+
+
+async def kb_save(token: str, article_id: int | None, title: str, content: str) -> dict:
+    payload = {"title": title, "content": content}
+    if article_id is None:
+        return await request("POST", "/kb/articles", token, json=payload)
+    return await request("PUT", f"/kb/articles/{article_id}", token, json=payload)
+
+
+async def kb_delete(token: str, article_id: int) -> None:
+    await request("DELETE", f"/kb/articles/{article_id}", token)
+
+
+async def kb_search(token: str, query: str) -> list[dict]:
+    return await request("POST", "/kb/search", token, json={"query": query})

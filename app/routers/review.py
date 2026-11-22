@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from langgraph.types import Command
 from sqlalchemy import case, select
 
-from app.ai.triage import graph_config, run_triage
+from app.ai.triage import graph_config, run_triage, ticket_input
 from app.core.dependencies import SessionDep, require_role
 from app.models import KBArticle, Ticket, TicketMessage, TriageRun, User
 from app.routers.tickets import get_visible_ticket
@@ -111,6 +111,9 @@ async def retriage(
     # Set "new" now so repeats get 409.
     ticket.status = "new"
     await session.commit()
-    # None: resume from last checkpoint.
-    background_tasks.add_task(run_triage, request.app.state.graph, ticket_id, None)
+    graph = request.app.state.graph
+    # Resume from checkpoint; none saved means start over.
+    saved = await graph.aget_state(graph_config(ticket_id, "retriage"))
+    graph_input = None if saved.values else ticket_input(ticket)
+    background_tasks.add_task(run_triage, graph, ticket_id, graph_input)
     return ticket

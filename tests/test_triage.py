@@ -92,3 +92,18 @@ async def test_graph_error_marks_ticket_failed(session_maker, monkeypatch):
     assert ticket.status == "failed"
     assert runs == []
     assert messages == []
+
+
+async def test_startup_fails_tickets_left_in_new(session_maker, monkeypatch):
+    monkeypatch.setattr(triage, "SessionLocal", session_maker)
+    async with session_maker() as session:
+        customer = User(email="c@example.com", full_name="C", hashed_password="x")
+        session.add(customer)
+        await session.flush()
+        session.add_all([Ticket(customer_id=customer.id, subject="a", body="b", status="new"),
+                         Ticket(customer_id=customer.id, subject="a", body="b", status="replied")])
+        await session.commit()
+
+    assert await triage.fail_interrupted_runs() == 1
+    async with session_maker() as session:
+        assert sorted((await session.scalars(select(Ticket.status))).all()) == ["failed", "replied"]

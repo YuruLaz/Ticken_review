@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 from sqlalchemy import select
 
@@ -13,6 +15,10 @@ class FakeGraph:
 
     def __init__(self):
         self.resumed_with = None
+        self.saved_values = {"subject": "Refund"}  # a checkpoint exists
+
+    async def aget_state(self, config):
+        return SimpleNamespace(values=self.saved_values)
 
     async def ainvoke(self, command, config):
         self.resumed_with = command.resume
@@ -157,3 +163,20 @@ async def test_agent_cannot_reply_to_ticket_awaiting_review(client, setup):
     )
 
     assert response.status_code == 409
+
+
+async def test_retriage_without_checkpoint_starts_over(client, setup, session_maker, monkeypatch):
+    calls = []
+
+    async def fake_run_triage(graph, ticket_id, graph_input):
+        calls.append(graph_input)
+
+    monkeypatch.setattr(review, "run_triage", fake_run_triage)
+    setup["graph"].saved_values = {}
+    async with session_maker() as session:
+        (await session.get(Ticket, setup["ticket_id"])).status = "failed"
+        await session.commit()
+
+    await client.post(f"/review/{setup['ticket_id']}/retriage", headers=setup["agent"])
+
+    assert calls[0]["body"] == "Charged twice."

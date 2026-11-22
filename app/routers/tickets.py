@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
-from app.ai.triage import run_triage
+from app.ai.triage import run_triage, ticket_input
 from app.core.dependencies import CurrentUser, SessionDep, require_role
 from app.models import Ticket, TicketMessage, User
 from app.schemas.ticket import (
@@ -64,8 +64,7 @@ async def create_ticket(
     session.add(ticket)
     await session.commit()
     # Runs after response; customer doesn't wait.
-    graph_input = {"ticket_id": ticket.id, "subject": ticket.subject, "body": ticket.body}
-    background_tasks.add_task(run_triage, request.app.state.graph, ticket.id, graph_input)
+    background_tasks.add_task(run_triage, request.app.state.graph, ticket.id, ticket_input(ticket))
     return ticket
 
 

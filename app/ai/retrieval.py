@@ -16,3 +16,8 @@ async def search_kb(session: AsyncSession, text: str, limit: int = 3) -> list[di
         {"id": article.id, "title": article.title, "content": article.content, "score": 1 - dist}
         for article, dist in rows
     ]
+
+
+async def embed_article(title: str, content: str) -> list[float]:
+    # Document embedding, like seed_kb; queries use aembed_query.
+    return (await get_embeddings().aembed_documents([f"{title}\n{content}"]))[0]

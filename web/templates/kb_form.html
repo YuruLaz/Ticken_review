@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if article.id else "New" }} article · SupportDesk{% endblock %}
+{% block main_class %}page wide{% endblock %}
+
+{% block content %}
+<p><a href="/admin/kb">← Knowledge base</a></p>
+<h1>{{ "Edit article" if article.id else "New article" }}</h1>
+
+<form class="card stack" method="post" action="/admin/kb/save">
+  {% if error %}<p class="alert error">{{ error }}</p>{% endif %}
+  {% if article.id %}<input type="hidden" name="article_id" value="{{ article.id }}">{% endif %}
+  <label>Title <input name="title" maxlength="200" value="{{ article.title }}" required></label>
+  <label>Content (Markdown)
+    <textarea name="content" rows="18" required>{{ article.content }}</textarea>
+  </label>
+  {# Saving calls the embedding API, so it takes a second. #}
+  <p class="small muted">Saving re-indexes the article for search.</p>
+  <button class="primary">Save</button>
+</form>
+{% endblock %}

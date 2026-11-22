@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Knowledge base · SupportDesk{% endblock %}
+{% block main_class %}page wide{% endblock %}
+
+{% block content %}
+<div class="head-row">
+  <h1>Knowledge base</h1>
+  <a class="button primary" href="/admin/kb/new">New article</a>
+</div>
+
+{% if msg %}<p class="alert success">{{ msg }}</p>{% endif %}
+
+<form class="card search-row" method="get" action="/admin/kb">
+  <input type="search" name="q" value="{{ q }}" placeholder="Test search: type a ticket's text…">
+  <button>Search</button>
+</form>
+
+{% if results is not none %}
+  <section class="card">
+    <h2>What a ticket like this retrieves</h2>
+    {# Routing sends a ticket to a human when the best score is under 0.65. #}
+    {% for result in results %}
+      <div class="kb-row">
+        <a href="/admin/kb/{{ result.id }}">{{ result.title }}</a>
+        <span class="small muted">score {{ result.score | score }}</span>
+      </div>
+    {% else %}
+      <p class="muted small">No articles.</p>
+    {% endfor %}
+    <p class="small muted">Below 0.65 the ticket goes to a human.</p>
+  </section>
+{% endif %}
+
+<section class="card">
+  <h2>{{ articles | length }} articles</h2>
+  {% for article in articles %}
+    <div class="kb-row">
+      <div class="row-main">
+        <a href="/admin/kb/{{ article.id }}"><strong>{{ article.title }}</strong></a>
+        <div class="snippet">{{ article.content | truncate(120) }}</div>
+      </div>
+      <form method="post" action="/admin/kb/{{ article.id }}/delete"
+            onsubmit="return confirm('Delete this article?')">
+        <button class="link danger">Delete</button>
+      </form>
+    </div>
+  {% else %}
+    <p class="muted">No articles yet.</p>
+  {% endfor %}
+</section>
+{% endblock %}

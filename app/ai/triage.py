@@ -1,6 +1,8 @@
 import logging
 import uuid
 
+from sqlalchemy import update
+
 from app.core.config import settings
 from app.database.db import SessionLocal
 from app.models import Ticket, TicketMessage, TriageRun
@@ -29,6 +31,20 @@ def graph_config(
         # Our own LangSmith trace ID.
         config["run_id"] = run_id
     return config
+
+
+def ticket_input(ticket: Ticket) -> dict:
+    """The graph's starting state for a ticket."""
+    return {"ticket_id": ticket.id, "subject": ticket.subject, "body": ticket.body}
+
+
+async def fail_interrupted_runs() -> int:
+    """At startup nothing is running, so any "new" ticket lost its run; make it re-runnable."""
+    # shortcut: assumes one API process; with several workers, track which process owns a run.
+    async with SessionLocal() as session:
+        result = await session.execute(update(Ticket).where(Ticket.status == "new").values(status="failed"))
+        await session.commit()
+    return result.rowcount
 
 
 async def run_triage(graph, ticket_id: int, graph_input: dict | None) -> None:

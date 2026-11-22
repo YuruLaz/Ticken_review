@@ -201,3 +201,15 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
 table.data { width: 100%; border-collapse: collapse; font-size: .9rem; }
 table.data th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); padding: .3rem 0; }
 table.data td { padding: .3rem 0; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+
+/* --- knowledge base --- */
+.head-row { display: flex; justify-content: space-between; align-items: center; }
+.head-row h1 { margin: 0; }
+a.button { display: inline-block; padding: .5rem 1rem; border-radius: var(--radius); text-decoration: none; }
+a.button.primary { background: var(--accent); color: #fff; }
+.search-row { display: flex; gap: .5rem; margin-top: 1rem; }
+.search-row input { flex: 1; }
+.kb-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .5rem 0; border-bottom: 1px solid var(--border); }
+.kb-row:last-of-type { border-bottom: none; }
+.kb-row form { margin: 0; }
+button.danger { color: var(--urgent); }

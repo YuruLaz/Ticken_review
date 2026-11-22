@@ -1,12 +1,16 @@
+import asyncio
+from collections.abc import AsyncIterable
 from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from fastapi.sse import EventSourceResponse, ServerSentEvent
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.ai.triage import run_triage, ticket_input
 from app.core.dependencies import CurrentUser, SessionDep, require_role
+from app.database.db import SessionLocal
 from app.models import Ticket, TicketMessage, User
 from app.schemas.ticket import (
     AgentTicketDetail,
@@ -155,3 +159,35 @@ async def add_message(
     session.add(message)
     await session.commit()
     return message
+
+
+POLL_SECONDS = 0.5
+STREAM_TIMEOUT_SECONDS = 300
+
+
+async def visible_ticket(ticket_id: int, user: CurrentUser, session: SessionDep) -> Ticket:
+    # As a dependency: 404 is sent before the stream starts.
+    return await get_visible_ticket(session, ticket_id, user)
+
+
+@router.get("/{ticket_id}/stream", response_class=EventSourceResponse)
+async def stream_progress(
+    ticket: Annotated[Ticket, Depends(visible_ticket)], request: Request
+) -> AsyncIterable[ServerSentEvent]:
+    """Live triage progress: a "node" event per graph step, then "done" with the new status."""
+    # Polls the checkpoint, so run_triage stays unchanged.
+    config = {"configurable": {"thread_id": str(ticket.id)}}
+    last_node = None
+    for _ in range(int(STREAM_TIMEOUT_SECONDS / POLL_SECONDS)):
+        # Fresh session per poll: no connection held while streaming.
+        async with SessionLocal() as session:
+            current = await session.scalar(select(Ticket.status).where(Ticket.id == ticket.id))
+        if current != "new":
+            yield ServerSentEvent(event="done", raw_data=current)
+            return
+        saved = await request.app.state.graph.aget_state(config)
+        node = saved.next[0] if saved.next else None
+        if node and node != last_node:
+            yield ServerSentEvent(event="node", raw_data=node)
+            last_node = node
+        await asyncio.sleep(POLL_SECONDS)

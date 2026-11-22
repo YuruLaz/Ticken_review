@@ -1,0 +1,13 @@
+{# Partial: the views nav with counts. With oob=true it rides along on a list refresh
+   and htmx swaps it in by id, so counts update after every action. #}
+{# hx-boost: these links load the next page with htmx (no full reload), and the URL still updates. #}
+<nav id="views" class="pane views" hx-boost="true" {% if oob %}hx-swap-oob="true"{% endif %}>
+  <h2>Views</h2>
+  {% for name, label, status in views %}
+    <a class="view {{ 'active' if name == view }}" href="/inbox?view={{ name }}">
+      {{ label }}
+      <span class="count">{{ total if status is none else counts.get(status, 0) }}</span>
+    </a>
+    {% if name == "escalated" %}<hr>{% endif %}
+  {% endfor %}
+</nav>

@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 from sqlalchemy import select
 
@@ -86,3 +88,44 @@ async def test_eleventh_ticket_in_an_hour_is_refused(client, session_maker):
         await session.commit()
     response = await client.post("/tickets", json={"subject": "s", "body": "b"}, headers=headers)
     assert response.status_code == 429
+
+
+class SteppingGraph:
+    """Each aget_state call moves one node further; finishing flips the ticket's status."""
+
+    def __init__(self, session_maker, ticket_id):
+        self.steps = [("classify",), ("classify",), ("retrieve",), ()]
+        self.session_maker, self.ticket_id = session_maker, ticket_id
+
+    async def aget_state(self, config):
+        next_nodes = self.steps.pop(0)
+        if not next_nodes:
+            async with self.session_maker() as session:
+                (await session.get(Ticket, self.ticket_id)).status = "replied"
+                await session.commit()
+        return SimpleNamespace(next=next_nodes)
+
+
+async def test_stream_reports_each_node_then_done(client, setup, session_maker, monkeypatch):
+    from app.main import app
+    from app.routers import tickets
+
+    monkeypatch.setattr(tickets, "SessionLocal", session_maker)
+    monkeypatch.setattr(tickets, "POLL_SECONDS", 0.001)
+    async with session_maker() as session:
+        ticket = await session.scalar(select(Ticket).where(Ticket.subject == "Charged twice"))
+        ticket.status = "new"
+        await session.commit()
+    monkeypatch.setattr(app.state, "graph", SteppingGraph(session_maker, ticket.id), raising=False)
+
+    response = await client.get(f"/tickets/{ticket.id}/stream", headers=setup["customer"])
+
+    events = [line.split(": ", 1)[1] for line in response.text.splitlines() if line.startswith(("event", "data"))]
+    assert events == ["node", "classify", "node", "retrieve", "done", "replied"]
+
+
+async def test_stream_hides_other_customers_tickets(client, setup, session_maker):
+    async with session_maker() as session:
+        ticket = await session.scalar(select(Ticket).where(Ticket.subject == "Login broken"))
+    response = await client.get(f"/tickets/{ticket.id}/stream", headers=setup["customer"])
+    assert response.status_code == 404

@@ -3,17 +3,7 @@
 {% block main_class %}inbox{% endblock %}
 
 {% block content %}
-{# hx-boost: these links load the next page with htmx (no full reload), and the URL still updates. #}
-<nav class="pane views" hx-boost="true">
-  <h2>Views</h2>
-  {% for name, label, status in views %}
-    <a class="view {{ 'active' if name == view }}" href="/inbox?view={{ name }}">
-      {{ label }}
-      <span class="count">{{ total if status is none else counts.get(status, 0) }}</span>
-    </a>
-    {% if name == "escalated" %}<hr>{% endif %}
-  {% endfor %}
-</nav>
+{% include "_views.html" %}
 
 <section class="pane list">
   <form id="filters" onsubmit="return false">

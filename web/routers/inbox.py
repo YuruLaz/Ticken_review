@@ -31,20 +31,17 @@ async def load_tickets(user: dict, view: str, q: str) -> list[dict]:
     return await api.list_tickets(user["token"], status=VIEW_STATUS.get(view), search=q)
 
 
+async def nav_context(user: dict, view: str) -> dict:
+    counts = await api.ticket_counts(user["token"])
+    return {"views": VIEWS, "counts": counts, "total": sum(counts.values()), "view": view}
+
+
 @router.get("")
 async def inbox(request: Request, user: User, view: str = "review", q: str = ""):
     if user["role"] == "customer":
         return RedirectResponse(home_for(user), status_code=303)
-    counts = await api.ticket_counts(user["token"])
-    context = {
-        "user": user,
-        "views": VIEWS,
-        "counts": counts,
-        "total": sum(counts.values()),
-        "view": view,
-        "q": q,
-        "tickets": await load_tickets(user, view, q),
-    }
+    context = {"user": user, "q": q, **await nav_context(user, view)}
+    context["tickets"] = await load_tickets(user, view, q)
     return templates.TemplateResponse(request, "inbox.html", context)
 
 
@@ -52,5 +49,5 @@ async def inbox(request: Request, user: User, view: str = "review", q: str = "")
 async def inbox_list(request: Request, user: User, view: str = "review", q: str = ""):
     """Just the ticket list, for htmx: search-as-you-type and the periodic refresh swap only this."""
     agent_only(user)
-    context = {"tickets": await load_tickets(user, view, q), "view": view}
-    return templates.TemplateResponse(request, "_ticket_list.html", context)
+    context = {"tickets": await load_tickets(user, view, q), "oob": True, **await nav_context(user, view)}
+    return templates.TemplateResponse(request, "_inbox_refresh.html", context)

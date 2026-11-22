@@ -7,6 +7,7 @@ from fastapi import APIRouter, Form, Request
 
 from web import api
 from web.dependencies import User, agent_only
+from web.routers.inbox import load_tickets
 from web.templating import templates
 
 router = APIRouter(prefix="/inbox/tickets")
@@ -24,13 +25,21 @@ async def render_workspace(request: Request, user: dict, ticket_id: int, **conte
     return templates.TemplateResponse(request, "_workspace.html", context)
 
 
-async def after_action(request: Request, user: dict, ticket_id: int, call):
-    """Run one API action, then re-render the pane: with the error, or with the new state."""
+async def after_action(request: Request, user: dict, ticket_id: int, call, done: str):
+    """Run one API action. On error stay on the ticket; on success open the view's next one."""
     try:
         await call
     except api.ApiError as error:
         return await render_workspace(request, user, ticket_id, error=str(error))
-    response = await render_workspace(request, user, ticket_id)
+    # The forms send the inbox's view and search (hx-include="#filters").
+    form = await request.form()
+    tickets = await load_tickets(user, form.get("view", "review"), form.get("q", ""))
+    following = next((t for t in tickets if t["id"] != ticket_id), None)
+    notice = f"Ticket #{ticket_id}: {done}."
+    if following:
+        response = await render_workspace(request, user, following["id"], notice=notice)
+    else:
+        response = templates.TemplateResponse(request, "_workspace_empty.html", {"notice": notice})
     # Tell the list to refresh.
     response.headers["HX-Trigger"] = "ticketsChanged"
     return response
@@ -61,14 +70,15 @@ async def decision(
         action = "edit"
     edited_reply = reply if action == "edit" else None
     call = api.decide(user["token"], ticket_id, action, edited_reply, note or None)
-    return await after_action(request, user, ticket_id, call)
+    done = {"approve": "reply sent", "edit": "edited reply sent", "reject": "draft rejected, moved to Escalated"}
+    return await after_action(request, user, ticket_id, call, done[action])
 
 
 @router.post("/{ticket_id}/retriage")
 async def retriage(request: Request, user: User, ticket_id: int):
-    return await after_action(request, user, ticket_id, api.retriage(user["token"], ticket_id))
+    return await after_action(request, user, ticket_id, api.retriage(user["token"], ticket_id), "AI re-run started")
 
 
 @router.post("/{ticket_id}/reply")
 async def agent_reply(request: Request, user: User, ticket_id: int, body: Annotated[str, Form()]):
-    return await after_action(request, user, ticket_id, api.add_message(user["token"], ticket_id, body))
+    return await after_action(request, user, ticket_id, api.add_message(user["token"], ticket_id, body), "reply sent")

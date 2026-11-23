@@ -5,7 +5,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: supportdesk
-    # 5433 on the host because a system PostgreSQL already uses 5432
     ports:
       - "5433:5432"
     volumes:
@@ -17,11 +16,9 @@ services:
 
   app:
     build: .
-    # Migrations first, so a fresh database gets its tables.
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     env_file: .env
     environment:
-      # Inside the network the database is "db", not localhost:5433.
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/supportdesk
     ports:
       - "8000:8000"
@@ -29,7 +26,6 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      # Slim image has no curl.
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 3s
       retries: 20

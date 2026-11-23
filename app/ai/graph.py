@@ -3,7 +3,6 @@ from langgraph.graph import END, START, StateGraph
 from app.ai import nodes
 from app.ai.state import TicketState
 
-# Caps the draft/quality-check retry loop.
 MAX_ATTEMPTS = 2
 
 
@@ -21,7 +20,6 @@ def after_decide_route(state: TicketState) -> str:
     return "send_reply" if state["route"] == "auto_send" else "human_review"
 
 
-# Saves state per node; enables resume.
 def build_graph(checkpointer=None):
     graph = StateGraph(TicketState)
 

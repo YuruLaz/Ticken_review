@@ -1,6 +1,5 @@
 import os
 
-# Before app import: no LangSmith traces.
 os.environ["LANGSMITH_TRACING"] = "false"
 
 import pytest  # noqa: E402
@@ -15,17 +14,13 @@ from app.database.base import Base
 from app.database.db import get_session
 from app.main import app
 
-# Test DB on the dev server.
 TEST_DATABASE_URL = make_url(settings.database_url).set(database="supportdesk_test")
 
 
 @pytest.fixture
 async def session_maker():
-    # New engine per test's event loop.
     engine = create_async_engine(TEST_DATABASE_URL)
-    # Drop first: failed test data stays inspectable.
     async with engine.begin() as conn:
-        # create_all doesn't enable pgvector.
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
@@ -39,7 +34,6 @@ async def client(session_maker):
         async with session_maker() as session:
             yield session
 
-    # Routes use the test database.
     app.dependency_overrides[get_session] = get_test_session
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -69,6 +63,5 @@ class FakeLLM:
 @pytest.fixture
 def fake_llm(monkeypatch):
     fake = FakeLLM()
-    # Patch the name nodes.py imported.
     monkeypatch.setattr(nodes, "get_llm", lambda: fake)
     return fake

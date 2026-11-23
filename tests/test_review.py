@@ -15,7 +15,7 @@ class FakeGraph:
 
     def __init__(self):
         self.resumed_with = None
-        self.saved_values = {"subject": "Refund"}  # a checkpoint exists
+        self.saved_values = {"subject": "Refund"}
 
     async def aget_state(self, config):
         return SimpleNamespace(values=self.saved_values)
@@ -35,7 +35,6 @@ async def headers_for(client, email):
 @pytest.fixture
 async def setup(client, session_maker, monkeypatch):
     graph = FakeGraph()
-    # Lifespan skipped; install graph manually.
     monkeypatch.setattr(app.state, "graph", graph, raising=False)
 
     customer = await headers_for(client, "customer@example.com")
@@ -47,7 +46,7 @@ async def setup(client, session_maker, monkeypatch):
         ticket = Ticket(customer_id=owner.id, subject="Refund", body="Charged twice.", status="awaiting_review",
                         sentiment="angry")
         session.add(ticket)
-        await session.flush()  # assigns ticket.id
+        await session.flush()
         session.add(TriageRun(ticket_id=ticket.id, draft_reply="Draft reply.", route="human_review",
                               route_reasons=["billing tickets are always reviewed"]))
         await session.commit()
@@ -126,7 +125,6 @@ async def test_retriage_restarts_a_failed_ticket(client, setup, session_maker, m
 
     assert response.status_code == 202
     assert response.json()["status"] == "new"
-    # None: continue from last checkpoint.
     assert calls == [(setup["ticket_id"], None)]
 
 

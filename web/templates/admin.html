@@ -2,7 +2,6 @@
 {% block title %}Dashboard · SupportDesk{% endblock %}
 {% block main_class %}page wide{% endblock %}
 
-{# One bar per key, length relative to the largest. `order` fixes the row order; else by count. #}
 {% macro bars(title, counts, order=none) %}
   <section class="card">
     <h2>{{ title }}</h2>
@@ -59,7 +58,6 @@
           {% endfor %}
         </tbody>
       </table>
-      {# The point of this table: rejected drafts should score lower than approved ones. #}
       <p class="small muted">If rejected drafts score as high as approved ones, the confidence threshold isn't filtering much.</p>
     {% else %}
       <p class="muted small">No reviewed drafts yet.</p>

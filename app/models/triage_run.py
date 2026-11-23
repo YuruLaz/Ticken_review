@@ -18,19 +18,16 @@ class TriageRun(Base):
     )
 
     classification_confidence: Mapped[float | None]
-    # Spam runs leave draft fields empty.
     draft_reply: Mapped[str | None] = mapped_column(Text)
     draft_confidence: Mapped[float | None]
     best_kb_score: Mapped[float | None]
     kb_article_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
     attempts: Mapped[int] = mapped_column(default=0)
 
-    route: Mapped[str] = mapped_column(String(20))  # spam | auto_send | human_review
-    # Shown to agents; used for tuning thresholds.
+    route: Mapped[str] = mapped_column(String(20))
     route_reasons: Mapped[list[str]] = mapped_column(JSON, default=list)
-    human_decision: Mapped[str | None] = mapped_column(String(20))  # approve | edit | reject
-    review_note: Mapped[str | None] = mapped_column(Text)  # agent's optional decision comment
-    # LangSmith trace ID, not a URL.
+    human_decision: Mapped[str | None] = mapped_column(String(20))
+    review_note: Mapped[str | None] = mapped_column(Text)
     langsmith_run_id: Mapped[uuid.UUID | None]
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

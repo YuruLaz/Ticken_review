@@ -1,7 +1,6 @@
-{# Partial: one ticket in the agent's right pane. Loaded with htmx; every form here swaps this
-   same pane, so after an action the agent sees the ticket's new state in place. #}
 <div class="ws-head">
   <h1>#{{ ticket.id }} {{ ticket.subject }}</h1>
+  <div class="small">{{ ticket.customer.full_name }} · {{ ticket.customer.email }}</div>
   <div class="small muted">
     <span class="chip">{{ ticket.status }}</span>
     <span class="dot inline {{ ticket.priority or '' }}"></span> {{ ticket.priority or "no priority" }}
@@ -45,7 +44,6 @@
 {% set base = "/inbox/tickets/" ~ ticket.id %}
 {% if ticket.status == "awaiting_review" %}
   <form class="stack card" hx-post="{{ base }}/decision" hx-target="#workspace" hx-include="#filters">
-    {# Sent back so the server can tell "approve" (untouched) from "edit". #}
     <input type="hidden" name="draft" value="{{ run.draft_reply }}">
     <label>AI draft (edit it before sending if needed)
       <textarea name="reply" rows="10">{{ run.draft_reply }}</textarea>

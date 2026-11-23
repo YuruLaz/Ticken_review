@@ -1,5 +1,3 @@
-/* One small hand-written stylesheet: variables first, then layout, then components. */
-
 :root {
   --bg: #f6f7f9;
   --panel: #ffffff;
@@ -28,7 +26,6 @@ h1 { font-size: 1.5rem; margin: 0 0 1rem; }
 h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 .5rem; }
 .muted { color: var(--muted); }
 
-/* --- top bar --- */
 .topbar {
   height: var(--topbar);
   display: flex;
@@ -43,10 +40,8 @@ h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: 
 .who { display: flex; align-items: center; gap: .75rem; }
 .who form { margin: 0; }
 
-/* --- page layouts --- */
 .page { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
 
-/* Three panes that fill the screen below the top bar; each pane scrolls on its own. */
 .inbox {
   display: grid;
   grid-template-columns: 210px 360px 1fr;
@@ -70,7 +65,6 @@ h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: 
 .view:hover { background: var(--bg); }
 .view.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
-/* --- components --- */
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -101,7 +95,7 @@ button {
   cursor: pointer;
 }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.stack button.link { align-self: flex-start; }  /* don't stretch across the form like the fields */
+.stack button.link { align-self: flex-start; }
 button.link { border: none; background: none; color: var(--accent); padding: 0; }
 
 .chip {
@@ -121,7 +115,6 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
 
 .auth { max-width: 420px; margin: 3rem auto; }
 
-/* --- inbox: views + ticket list --- */
 .views hr { border: none; border-top: 1px solid var(--border); margin: .5rem 0; }
 .count { color: var(--muted); font-weight: 400; font-size: .85rem; }
 .view.active .count { color: var(--accent); }
@@ -137,26 +130,23 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
-.row-main { flex: 1; min-width: 0; }  /* min-width lets long text shrink instead of widening the pane */
+.row-main { flex: 1; min-width: 0; }
 .row-top { display: flex; justify-content: space-between; gap: .5rem; }
 .row-top strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .snippet { color: var(--muted); font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .small { font-size: .8rem; }
 .empty-list { text-align: center; margin-top: 2rem; }
 
-/* Small colored circle (priority in the workspace header, sentiment everywhere). */
 .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: .45rem; flex-shrink: 0; background: var(--border); }
 .dot.urgent { background: var(--urgent); }
 .dot.high { background: var(--high); }
 .dot.medium { background: #94a3b8; }
 
-/* --- customer conversation --- */
 .msg { padding: .6rem .8rem; margin-bottom: .6rem; border-radius: var(--radius); border: 1px solid var(--border); background: var(--panel); }
 .msg.customer { margin-left: 3rem; background: var(--accent-soft); }
 .msg.ai, .msg.agent { margin-right: 3rem; }
-.msg-body { white-space: pre-wrap; }  /* keep the line breaks people typed */
+.msg-body { white-space: pre-wrap; }
 
-/* --- agent workspace --- */
 .row.clickable { cursor: pointer; }
 .row.clickable:hover { border-color: var(--accent); }
 .ws-head { margin-bottom: 1rem; }
@@ -166,23 +156,18 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
 .scores { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: .5rem; }
 .actions { display: flex; gap: .5rem; }
 
-/* Sentiment dot, same shape as the priority dot. */
 .dot.mood.angry { background: var(--urgent); }
 .dot.mood.negative { background: var(--high); }
 .dot.mood.neutral { background: #94a3b8; }
 .dot.mood.positive { background: var(--ok); }
 
-/* Priority word in the row, colored like its dot so the two read as one signal. */
 .priority { font-weight: 600; }
 .priority.urgent { color: var(--urgent); }
 .priority.high { color: var(--high); }
 
-/* Stripe on the left edge of urgent and high rows. A shadow rather than border-left, so the
-   hover border color doesn't paint over it. */
 .row.urgent { box-shadow: inset 4px 0 0 var(--urgent); }
 .row.high { box-shadow: inset 4px 0 0 var(--high); }
 
-/* --- admin dashboard --- */
 .page.wide { max-width: 1100px; }
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
 .tile { margin-bottom: 0; }
@@ -190,7 +175,6 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
 .tile-label { font-weight: 600; margin-bottom: .25rem; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
 
-/* Single-series bars: one hue, value written beside each bar. */
 .bar-row { display: grid; grid-template-columns: 110px 1fr 2.5rem; align-items: center; gap: .6rem; padding: .2rem 0; }
 .bar-label { font-size: .9rem; }
 .bar-track { height: 12px; }
@@ -202,7 +186,6 @@ table.data { width: 100%; border-collapse: collapse; font-size: .9rem; }
 table.data th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); padding: .3rem 0; }
 table.data td { padding: .3rem 0; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
 
-/* --- knowledge base --- */
 .head-row { display: flex; justify-content: space-between; align-items: center; }
 .head-row h1 { margin: 0; }
 a.button { display: inline-block; padding: .5rem 1rem; border-radius: var(--radius); text-decoration: none; }

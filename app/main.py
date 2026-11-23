@@ -16,10 +16,7 @@ from app.routers import analytics, auth, kb, review, tickets
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_tracing()
-    # psycopg needs the plain postgresql:// URL.
     conn_string = settings.database_url.replace("+asyncpg", "")
-    # Pool: parallel checkpoints, replaces broken connections.
-    # open=False: opened by async with.
     async with AsyncConnectionPool(
         conn_string,
         kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
@@ -28,7 +25,6 @@ async def lifespan(app: FastAPI):
         checkpointer = AsyncPostgresSaver(pool)
         await checkpointer.setup()
         app.state.graph = build_graph(checkpointer)
-        # Background runs die with the process.
         if count := await fail_interrupted_runs():
             logging.getLogger(__name__).warning("Marked %s interrupted tickets as failed", count)
         yield

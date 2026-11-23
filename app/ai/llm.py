@@ -5,14 +5,11 @@ from app.core.config import settings
 from app.models.kb import EMBEDDING_DIM
 
 
-# Swappable in tests; Claude rejects temperature.
 def get_llm():
     return ChatAnthropic(
         model=settings.anthropic_model,
         api_key=settings.anthropic_api_key,
-        # Default 128K is refused without streaming.
         max_tokens=16000,
-        # SDK retries timeouts, 429s and 5xx.
         max_retries=3,
         default_request_timeout=60,
     )

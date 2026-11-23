@@ -13,19 +13,15 @@ from app.ai.schemas import DraftReply, TicketClassification
 from app.ai.state import TicketState
 from app.database.db import SessionLocal
 
-# Nodes return only their changed fields.
 
-# Retry once on schema-invalid output.
 RETRY_BAD_OUTPUT = {"retry_if_exception_type": (OutputParserException, ValidationError), "stop_after_attempt": 2}
 
 
-# Mask PII before LLM, checkpoints, traces.
 def sanitize_input(state: TicketState) -> dict:
     return {"subject": clean(state["subject"]), "body": clean(state["body"])}
 
 
 def clean(text: str) -> str:
-    # Stop customers closing the <ticket> block.
     text = re.sub(r"</?ticket>", "", text, flags=re.IGNORECASE)
     return mask_pii(text)
 
@@ -46,7 +42,6 @@ def mark_spam(state: TicketState) -> dict:
     return {"route": "spam"}
 
 
-# Async DB, so run graph with ainvoke.
 async def retrieve(state: TicketState) -> dict:
     async with SessionLocal() as session:
         articles = await search_kb(session, f"{state['subject']}\n{state['body']}")
@@ -94,7 +89,6 @@ def send_reply(state: TicketState) -> dict:
 
 
 def human_review(state: TicketState) -> dict:
-    # Pauses here; resume returns agent's decision.
     decision = interrupt({"draft_reply": state["draft_reply"], "reasons": state["route_reasons"]})
 
     if decision["action"] == "approve":

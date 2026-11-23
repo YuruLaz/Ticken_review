@@ -4,11 +4,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
 
-# Must match embedding model output size.
 EMBEDDING_DIM = 768
 
 
-# shortcut: whole-article embeddings; chunk if retrieval degrades.
 class KBArticle(Base):
     __tablename__ = "kb_articles"
 

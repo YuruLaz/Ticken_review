@@ -20,7 +20,6 @@ async def render_workspace(request: Request, user: dict, ticket_id: int, **conte
     except api.ApiError as error:
         if error.status_code != 404:
             raise
-        # Not triaged yet: no AI panel.
         context |= {"ticket": await api.get_ticket(user["token"], ticket_id), "run": None}
     return templates.TemplateResponse(request, "_workspace.html", context)
 
@@ -31,7 +30,6 @@ async def after_action(request: Request, user: dict, ticket_id: int, call, done:
         await call
     except api.ApiError as error:
         return await render_workspace(request, user, ticket_id, error=str(error))
-    # The forms send the inbox's view and search (hx-include="#filters").
     form = await request.form()
     tickets = await load_tickets(user, form.get("view", "review"), form.get("q", ""))
     following = next((t for t in tickets if t["id"] != ticket_id), None)
@@ -40,7 +38,6 @@ async def after_action(request: Request, user: dict, ticket_id: int, call, done:
         response = await render_workspace(request, user, following["id"], notice=notice)
     else:
         response = templates.TemplateResponse(request, "_workspace_empty.html", {"notice": notice})
-    # Tell the list to refresh.
     response.headers["HX-Trigger"] = "ticketsChanged"
     return response
 
@@ -51,7 +48,6 @@ async def workspace(request: Request, user: User, ticket_id: int):
 
 
 def same_text(a: str, b: str) -> bool:
-    # Ignore \r\n vs \n differences.
     return a.replace("\r\n", "\n").strip() == b.replace("\r\n", "\n").strip()
 
 
@@ -65,7 +61,6 @@ async def decision(
     draft: Annotated[str, Form()] = "",
     note: Annotated[str, Form()] = "",
 ):
-    # Unchanged draft is approve, else edit.
     if action == "approve" and not same_text(reply, draft):
         action = "edit"
     edited_reply = reply if action == "edit" else None

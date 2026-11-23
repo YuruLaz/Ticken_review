@@ -27,7 +27,6 @@ async def login(request: Request, email: Annotated[str, Form()], password: Annot
     except api.ApiError as error:
         return templates.TemplateResponse(request, "login.html", {"error": str(error), "email": email})
     response = RedirectResponse("/", status_code=303)
-    # httponly blocks XSS theft; samesite limits CSRF.
     response.set_cookie(TOKEN_COOKIE, token, httponly=True, samesite="lax")
     return response
 

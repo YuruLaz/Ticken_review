@@ -20,7 +20,6 @@ def create_access_token(user_id: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    # JWT requires "sub" as a string.
     payload = {"sub": str(user_id), "exp": expire}
     return jwt.encode(
         payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
@@ -28,7 +27,6 @@ def create_access_token(user_id: int) -> str:
 
 
 def decode_access_token(token: str) -> dict:
-    # Raises jwt.InvalidTokenError on bad tokens.
     return jwt.decode(
         token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
     )

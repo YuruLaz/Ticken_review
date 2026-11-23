@@ -24,9 +24,6 @@ async def dashboard(request: Request, user: User):
     return templates.TemplateResponse(request, "admin.html", context)
 
 
-# --- knowledge base ---
-
-
 @router.get("/kb")
 async def kb_list(request: Request, user: User, q: str = "", msg: str = ""):
     if redirect := not_admin(user):
@@ -35,7 +32,6 @@ async def kb_list(request: Request, user: User, q: str = "", msg: str = ""):
         "user": user,
         "articles": await api.kb_articles(user["token"]),
         "q": q,
-        # Test search: what a ticket with this text would retrieve.
         "results": await api.kb_search(user["token"], q) if q else None,
         "msg": msg,
     }
@@ -67,12 +63,11 @@ async def kb_save(
     user: User,
     title: Annotated[str, Form()],
     content: Annotated[str, Form()],
-    article_id: Annotated[int | None, Form()] = None,  # empty for a new article
+    article_id: Annotated[int | None, Form()] = None,
 ):
     try:
         await api.kb_save(user["token"], article_id, title, content)
     except api.ApiError as error:
-        # Keep the typed article on failure.
         article = {"id": article_id, "title": title, "content": content}
         return await render_form(request, user, article, str(error))
     return RedirectResponse(f"/admin/kb?msg=Saved “{title}”", status_code=303)

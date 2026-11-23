@@ -11,7 +11,6 @@ async def admin(client, session_maker):
     async with session_maker() as session:
         user = await session.scalar(select(User).where(User.email == "admin@example.com"))
         user.role = "admin"
-        # Two auto-sent, two reviewed, one spam.
         runs = [
             ("billing", "high", "auto_send", None, 0.9),
             ("billing", "low", "auto_send", None, 0.9),
@@ -23,7 +22,7 @@ async def admin(client, session_maker):
             ticket = Ticket(customer_id=user.id, subject="s", body="b", status="new",
                             category=category, priority=priority)
             session.add(ticket)
-            await session.flush()  # gives the ticket its id
+            await session.flush()
             session.add(TriageRun(ticket_id=ticket.id, route=route, human_decision=decision,
                                   draft_confidence=confidence))
         await session.commit()
@@ -38,7 +37,7 @@ async def test_overview_counts_by_category_and_priority(client, admin):
 
 async def test_automation_rate_leaves_out_spam(client, admin):
     data = (await client.get("/analytics/automation-rate", headers=admin)).json()
-    assert data["automation_rate"] == 0.5  # 2 auto-sent of 4 non-spam
+    assert data["automation_rate"] == 0.5
 
 
 async def test_ai_accuracy(client, admin):

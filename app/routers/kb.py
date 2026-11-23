@@ -43,7 +43,6 @@ async def create_article(data: KBArticleWrite, user: Admin, session: SessionDep)
 
 @router.put("/articles/{article_id}", response_model=KBArticleRead)
 async def update_article(article_id: int, data: KBArticleWrite, user: Admin, session: SessionDep):
-    # Updated in place: same id, so past triage runs still point to it.
     article = await get_article(session, article_id)
     article.title, article.content = data.title, data.content
     article.embedding = await embed_article(data.title, data.content)
@@ -59,5 +58,4 @@ async def delete_article(article_id: int, user: Admin, session: SessionDep):
 
 @router.post("/search", response_model=list[KBSearchResult])
 async def search(data: KBSearch, user: Staff, session: SessionDep):
-    # Same search the graph uses, for checking what a ticket would retrieve.
     return await search_kb(session, data.query)

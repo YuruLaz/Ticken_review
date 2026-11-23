@@ -7,23 +7,17 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-import app.models  # noqa: F401  registers all models
+import app.models  # noqa: F401
 from app.core.config import settings
 from app.database.base import Base
 
-# Alembic Config, values from alembic.ini.
 config = context.config
-# Database URL comes from .env.
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
-# Set up logging from config.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Model metadata, used by autogenerate.
 target_metadata = Base.metadata
-
-# Other values: config.get_main_option().
 
 
 def run_migrations_offline() -> None:
@@ -51,7 +45,6 @@ def run_migrations_offline() -> None:
 
 
 def include_object(object, name, type_, reflected, compare_to):
-    # Checkpointer tables aren't Alembic's; skip them.
     return not (type_ == "table" and name.startswith("checkpoint"))
 
 

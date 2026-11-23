@@ -1,6 +1,5 @@
 from app.ai.routing import route
 
-# Passes every rule; tests change one thing.
 GOOD = dict(
     priority="low",
     sentiment="neutral",
@@ -37,7 +36,6 @@ def test_billing_goes_to_human():
 
 
 def test_account_follows_normal_rules():
-    # Spec demo: password reset auto-replied.
     assert route(**{**GOOD, "category": "account"}).action == "auto_send"
 
 

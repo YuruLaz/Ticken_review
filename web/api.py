@@ -21,7 +21,6 @@ def _message(response: httpx.Response) -> str:
         detail = None
     if isinstance(detail, str):
         return detail
-    # 422 details: one per invalid field.
     if isinstance(detail, list):
         return "; ".join(error["msg"] for error in detail)
     return f"Request failed ({response.status_code})"
@@ -36,11 +35,10 @@ async def request(method: str, path: str, token: str | None = None, **kwargs):
         raise ApiError(503, "Can't reach the API. Is it running?")
     if response.is_error:
         raise ApiError(response.status_code, _message(response))
-    return response.json() if response.content else None  # 204 has no body
+    return response.json() if response.content else None
 
 
 async def login(email: str, password: str) -> str:
-    # OAuth2 login: form with username.
     data = {"username": email, "password": password}
     return (await request("POST", "/auth/login", data=data))["access_token"]
 
@@ -55,7 +53,6 @@ async def me(token: str) -> dict:
 
 
 async def list_tickets(token: str, **filters) -> list[dict]:
-    # Skip unset filters; empty matches nothing.
     params = {key: value for key, value in filters.items() if value}
     return await request("GET", "/tickets", token, params=params)
 

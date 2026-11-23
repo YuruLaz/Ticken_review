@@ -7,7 +7,6 @@
 
   {% if success %}<p class="alert success">{{ success }}</p>{% endif %}
 
-  {# Two plain forms; no htmx needed here, a normal post + redirect is the right tool. #}
   <details class="card" {% if tab != "register" %}open{% endif %}>
     <summary>Log in</summary>
     {% if error %}<p class="alert error">{{ error }}</p>{% endif %}

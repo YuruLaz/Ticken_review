@@ -8,14 +8,12 @@ async def register(client, **overrides):
 
 
 async def login(client, password=PASSWORD):
-    # OAuth2 login takes form data.
     return await client.post(
         "/auth/login", data={"username": EMAIL, "password": password}
     )
 
 
 async def test_register_creates_customer(client):
-    # Users can't choose their role.
     response = await register(client, role="admin")
 
     assert response.status_code == 201

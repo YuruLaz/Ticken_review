@@ -10,7 +10,6 @@ class UserCreate(BaseModel):
 
 
 class UserRead(BaseModel):
-    # Read attributes from SQLAlchemy objects.
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -22,7 +21,6 @@ class UserRead(BaseModel):
 
 
 class LoginForm(BaseModel):
-    # OAuth2 field names; username holds email.
     username: str
     password: str
 

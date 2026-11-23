@@ -15,7 +15,6 @@ def test_classify(fake_llm):
     assert result["category"] == "shipping"
     assert result["language"] == "en"
     assert result["classification_confidence"] == 0.9
-    # Prompt must include the ticket.
     assert "Where is my order?" in fake_llm.prompts[0]
 
 

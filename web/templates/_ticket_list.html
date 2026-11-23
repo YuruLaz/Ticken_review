@@ -1,10 +1,9 @@
-{# Partial: the ticket rows only. Rendered inside inbox.html and on its own for htmx swaps. #}
 {% for ticket in tickets %}
   <div class="row clickable {{ ticket.priority or '' }}" hx-get="/inbox/tickets/{{ ticket.id }}" hx-target="#workspace">
     <div class="row-main">
       <div class="row-top">
         <strong>#{{ ticket.id }} {{ ticket.subject }}</strong>
-        <span class="muted small">{{ ticket.created_at | age }}</span>
+        <span class="muted small">{{ ticket.customer.full_name }} · {{ ticket.created_at | age }}</span>
       </div>
       <div class="snippet">{{ ticket.body | truncate(80) }}</div>
       <div class="small muted">

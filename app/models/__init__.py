@@ -1,4 +1,3 @@
-# Import all models for Alembic metadata.
 from app.models.kb import KBArticle
 from app.models.ticket import Ticket, TicketMessage
 from app.models.triage_run import TriageRun

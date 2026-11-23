@@ -20,7 +20,7 @@ async def get_user(request: Request) -> dict:
     try:
         user = await api.me(token)
     except api.ApiError:
-        raise LoginRequired  # expired or invalid token
+        raise LoginRequired
     user["token"] = token
     return user
 
@@ -33,6 +33,5 @@ def home_for(user: dict) -> str:
 
 
 def agent_only(user: dict):
-    # For partials; full pages redirect instead.
     if user["role"] == "customer":
         raise HTTPException(status_code=403, detail="Agents only")

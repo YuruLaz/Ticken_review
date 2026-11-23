@@ -4,7 +4,6 @@ from app.core.config import settings
 
 engine = create_async_engine(settings.database_url)
 
-# Avoid lazy reloads after commit (async).
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 

@@ -20,7 +20,6 @@ async def setup(client, session_maker):
     other = await headers_for(client, "other@example.com")
     agent = await headers_for(client, "agent@example.com")
 
-    # Direct insert avoids running the graph.
     async with session_maker() as session:
         (await session.scalar(select(User).where(User.email == "agent@example.com"))).role = "agent"
         owner = await session.scalar(select(User).where(User.email == "customer@example.com"))
@@ -56,7 +55,6 @@ async def test_filters_never_show_other_customers_tickets(client, setup):
 
 
 async def test_customer_cannot_filter_on_hidden_fields(client, setup):
-    # Hidden field filter ignored for customers.
     assert await subjects(client, setup["customer"], sentiment="angry") == ["Charged twice", "Where is my order"]
 
 
@@ -64,6 +62,16 @@ async def test_pagination(client, setup):
     first = await subjects(client, setup["agent"], size=2, page=1)
     second = await subjects(client, setup["agent"], size=2, page=2)
     assert len(first) == 2 and len(second) == 1
+
+
+async def test_only_agents_see_who_the_customer_is(client, setup):
+    tickets = (await client.get("/tickets", headers=setup["agent"])).json()
+    detail = (await client.get(f"/tickets/{tickets[0]['id']}", headers=setup["agent"])).json()
+    own = (await client.get("/tickets", headers=setup["customer"])).json()
+
+    assert {t["customer"]["email"] for t in tickets} == {"customer@example.com", "other@example.com"}
+    assert "@example.com" in detail["customer"]["email"]
+    assert "customer" not in own[0]
 
 
 async def test_counts_per_status(client, setup):

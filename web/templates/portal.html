@@ -8,19 +8,13 @@
   <p class="alert success">Thanks! We got your request #{{ sent }} and will reply here soon.</p>
 {% endif %}
 
-{# Open by default only when there's something to do in it: first visit, or a failed send. #}
 <details class="card" {% if error or not tickets %}open{% endif %}>
   <summary>New request</summary>
   {% if error %}<p class="alert error">{{ error }}</p>{% endif %}
-  {# maxlength mirrors the API limits, so the browser stops the typing instead of the API rejecting it. #}
   <form method="post" action="/portal/tickets" class="stack">
-    {# One Subject field: a topic dropdown that turns into a text box when "Other" is chosen.
-       The hidden dropdown still sends topic=other, so the server knows to use the typed subject.
-       A disabled input isn't sent with the form and skips its "required" check. #}
     {% set custom = topic == 'other' %}
     <label>Subject
       <select name="topic" required onchange="if (this.value === 'other') customSubject(true)" {{ 'hidden' if custom }}>
-        {# Placeholder only: hidden from the list and can't be picked, so "required" forces a real choice. #}
         <option value="" disabled hidden {{ 'selected' if not topic }}>Choose a topic…</option>
         {% for option in topics %}
           <option {{ 'selected' if topic == option }}>{{ option }}</option>

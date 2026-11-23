@@ -8,7 +8,6 @@ from app.database.base import Base
 
 class Ticket(Base):
     __tablename__ = "tickets"
-    # Fetch updated_at eagerly; avoids MissingGreenlet.
     __mapper_args__ = {"eager_defaults": True}
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -17,7 +16,6 @@ class Ticket(Base):
     body: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(30), default="new", index=True)
 
-    # Null until the AI classifies.
     category: Mapped[str | None] = mapped_column(String(30))
     priority: Mapped[str | None] = mapped_column(String(20))
     sentiment: Mapped[str | None] = mapped_column(String(20))
@@ -29,6 +27,7 @@ class Ticket(Base):
         server_default=func.now(), onupdate=func.now()
     )
 
+    customer: Mapped["User"] = relationship(lazy="joined")
     messages: Mapped[list["TicketMessage"]] = relationship(
         back_populates="ticket", order_by="TicketMessage.created_at"
     )
@@ -41,7 +40,6 @@ class TicketMessage(Base):
     ticket_id: Mapped[int] = mapped_column(
         ForeignKey("tickets.id", ondelete="CASCADE"), index=True
     )
-    # customer | ai | agent; AI has no author.
     sender_type: Mapped[str] = mapped_column(String(20))
     author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     body: Mapped[str] = mapped_column(Text)

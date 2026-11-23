@@ -39,5 +39,5 @@ class ReviewDetail(BaseModel):
 
 class Decision(BaseModel):
     action: Literal["approve", "edit", "reject"]
-    edited_reply: str | None = None  # required when action is "edit"
+    edited_reply: str | None = None
     note: str | None = None

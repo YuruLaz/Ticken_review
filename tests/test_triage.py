@@ -32,14 +32,13 @@ async def run(session_maker, monkeypatch, state):
     async with session_maker() as session:
         customer = User(email="c@example.com", full_name="C", hashed_password="x")
         session.add(customer)
-        await session.flush()  # assigns customer.id, no commit
+        await session.flush()
         ticket = Ticket(customer_id=customer.id, subject="Where is my order?", body="Order 123 is late.")
         session.add(ticket)
         await session.commit()
 
     await triage.run_triage(FakeGraph(state), ticket.id, {"subject": ticket.subject, "body": ticket.body})
 
-    # Fresh session reads committed data.
     async with session_maker() as session:
         ticket = await session.get(Ticket, ticket.id)
         runs = (await session.scalars(select(TriageRun))).all()

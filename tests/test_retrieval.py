@@ -25,5 +25,5 @@ async def test_search_kb_returns_closest_article_first(session_maker, monkeypatc
         results = await retrieval.search_kb(session, "where is my order?")
 
     assert [r["title"] for r in results] == ["Shipping times", "Refunds"]
-    assert results[0]["score"] == 1.0  # same direction as the query
-    assert results[1]["score"] == 0.0  # unrelated
+    assert results[0]["score"] == 1.0
+    assert results[1]["score"] == 0.0

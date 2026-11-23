@@ -18,7 +18,6 @@ def age(created_at: str) -> str:
     return f"{minutes // (24 * 60)} d ago"
 
 
-# Customers only see two statuses.
 def customer_status(status: str) -> str:
     return "Answered" if status == "replied" else "We're on it"
 

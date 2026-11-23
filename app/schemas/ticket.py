@@ -4,9 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class TicketCreate(BaseModel):
-    # Matches String(200); avoids a DB 500.
     subject: str = Field(max_length=200)
-    # Spec input limit; bounds prompt cost.
     body: str = Field(max_length=5000)
 
 
@@ -42,8 +40,15 @@ class TicketDetail(TicketRead):
     messages: list[MessageRead]
 
 
-# Agent view: adds internal AI signals.
+class CustomerBrief(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    full_name: str
+    email: str
+
+
 class AgentTicketRead(TicketRead):
+    customer: CustomerBrief
     priority: str | None
     sentiment: str | None
     ai_summary: str | None

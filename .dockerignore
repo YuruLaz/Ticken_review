@@ -1,4 +1,3 @@
-# Secrets come from env_file at runtime, never baked in.
 .env
 .venv/
 .git/

@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class KBArticleWrite(BaseModel):
-    title: str = Field(min_length=1, max_length=200)  # String(200) in the model
+    title: str = Field(min_length=1, max_length=200)
     content: str = Field(min_length=1)
 
 
@@ -19,4 +19,4 @@ class KBSearch(BaseModel):
 
 
 class KBSearchResult(KBArticleRead):
-    score: float  # similarity, 1 = same meaning
+    score: float

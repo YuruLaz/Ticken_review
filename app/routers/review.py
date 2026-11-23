@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from langgraph.types import Command
 from sqlalchemy import case, select
 
-from app.ai.triage import graph_config, run_triage, ticket_input
+from app.ai.pipeline.triage import graph_config, run_triage, ticket_input
 from app.core.dependencies import SessionDep, require_role
 from app.models import KBArticle, Ticket, TicketMessage, TriageRun, User
 from app.routers.tickets import get_visible_ticket

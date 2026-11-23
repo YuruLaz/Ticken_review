@@ -1,7 +1,7 @@
 import langsmith
 from langsmith.anonymizer import create_anonymizer
 
-from app.ai.pii import mask_pii
+from app.ai.pipeline.pii import mask_pii
 
 
 def setup_tracing() -> None:

@@ -1,7 +1,7 @@
 from langgraph.graph import END, START, StateGraph
 
-from app.ai import nodes
-from app.ai.state import TicketState
+from app.ai.pipeline import nodes
+from app.ai.pipeline.state import TicketState
 
 MAX_ATTEMPTS = 2
 

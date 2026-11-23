@@ -1,4 +1,4 @@
-from app.ai.routing import route
+from app.ai.pipeline.routing import route
 
 GOOD = dict(
     priority="low",

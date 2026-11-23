@@ -2,9 +2,9 @@ import pytest
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
-from app.ai import nodes
-from app.ai.graph import build_graph
-from app.ai.schemas import DraftReply, TicketClassification
+from app.ai.pipeline import nodes
+from app.ai.pipeline.graph import build_graph
+from app.ai.llm.schemas import DraftReply, TicketClassification
 
 TICKET = {"ticket_id": 1, "subject": "Where is my order?", "body": "Order 123 is late."}
 CONFIG = {"configurable": {"thread_id": "ticket-1"}}

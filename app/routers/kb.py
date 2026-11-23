@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
-from app.ai.retrieval import embed_article, search_kb
+from app.ai.pipeline.retrieval import embed_article, search_kb
 from app.core.dependencies import SessionDep, require_role
 from app.models import KBArticle, User
 from app.schemas.kb import KBArticleRead, KBArticleWrite, KBSearch, KBSearchResult

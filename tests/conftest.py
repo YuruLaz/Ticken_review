@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.ai import nodes
+from app.ai.pipeline import nodes
 from app.core.config import settings
 from app.database.base import Base
 from app.database.db import get_session

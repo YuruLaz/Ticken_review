@@ -5,7 +5,7 @@ from pathlib import Path
 
 from sqlalchemy import delete
 
-from app.ai.llm import get_embeddings
+from app.ai.llm.client import get_embeddings
 from app.database.db import SessionLocal
 from app.models.kb import KBArticle
 

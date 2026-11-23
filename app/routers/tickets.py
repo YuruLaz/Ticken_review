@@ -8,7 +8,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
-from app.ai.triage import run_triage, ticket_input
+from app.ai.pipeline.triage import run_triage, ticket_input
 from app.core.dependencies import CurrentUser, SessionDep, require_role
 from app.database.db import SessionLocal
 from app.models import Ticket, TicketMessage, User

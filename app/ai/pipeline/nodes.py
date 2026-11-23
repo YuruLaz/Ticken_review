@@ -4,13 +4,13 @@ from langchain_core.exceptions import OutputParserException
 from langgraph.types import interrupt
 from pydantic import ValidationError
 
-from app.ai.llm import get_llm
-from app.ai.pii import mask_pii
-from app.ai.prompts import classify_prompt, draft_prompt
-from app.ai.retrieval import search_kb
-from app.ai.routing import route
-from app.ai.schemas import DraftReply, TicketClassification
-from app.ai.state import TicketState
+from app.ai.llm.client import get_llm
+from app.ai.pipeline.pii import mask_pii
+from app.ai.llm.prompts import classify_prompt, draft_prompt
+from app.ai.pipeline.retrieval import search_kb
+from app.ai.pipeline.routing import route
+from app.ai.llm.schemas import DraftReply, TicketClassification
+from app.ai.pipeline.state import TicketState
 from app.database.db import SessionLocal
 
 

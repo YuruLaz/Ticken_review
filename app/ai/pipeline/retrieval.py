@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.llm import get_embeddings
+from app.ai.llm.client import get_embeddings
 from app.models.kb import KBArticle
 
 

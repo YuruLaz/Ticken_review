@@ -1,4 +1,4 @@
-from app.ai.state import TicketState
+from app.ai.pipeline.state import TicketState
 
 def classify_prompt(state: TicketState) -> str:
     return f"""

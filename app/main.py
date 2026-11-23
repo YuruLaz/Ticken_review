@@ -6,9 +6,9 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from app.ai.graph import build_graph
-from app.ai.triage import fail_interrupted_runs
-from app.ai.tracing import setup_tracing
+from app.ai.pipeline.graph import build_graph
+from app.ai.pipeline.triage import fail_interrupted_runs
+from app.ai.llm.tracing import setup_tracing
 from app.core.config import settings
 from app.routers import analytics, auth, kb, review, tickets
 

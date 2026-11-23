@@ -1,4 +1,4 @@
-from app.ai.pii import mask_pii
+from app.ai.pipeline.pii import mask_pii
 
 
 def test_card_keeps_first_and_last_four_digits():

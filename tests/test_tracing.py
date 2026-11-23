@@ -1,7 +1,7 @@
 import langsmith
 from langchain_core.tracers.langchain import get_client
 
-from app.ai.tracing import setup_tracing
+from app.ai.llm.tracing import setup_tracing
 
 
 def test_traces_are_masked_before_upload():

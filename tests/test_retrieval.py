@@ -1,4 +1,4 @@
-from app.ai import retrieval
+from app.ai.pipeline import retrieval
 from app.models.kb import EMBEDDING_DIM, KBArticle
 
 

@@ -1,5 +1,5 @@
-from app.ai import nodes
-from app.ai.schemas import DraftReply, TicketClassification
+from app.ai.pipeline import nodes
+from app.ai.llm.schemas import DraftReply, TicketClassification
 
 TICKET = {"ticket_id": 1, "subject": "Where is my order?", "body": "Order 123 is late."}
 

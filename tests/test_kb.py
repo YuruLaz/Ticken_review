@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy import select
 
-from app.ai import retrieval
+from app.ai.pipeline import retrieval
 from app.models import KBArticle, User
 from tests.test_retrieval import one_hot
 from tests.test_tickets import headers_for

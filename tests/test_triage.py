@@ -1,6 +1,6 @@
 from sqlalchemy import select
 
-from app.ai import triage
+from app.ai.pipeline import triage
 from app.models import Ticket, TicketMessage, TriageRun, User
 
 CLASSIFIED = {"category": "shipping", "priority": "low", "sentiment": "neutral", "language": "en",
